@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>관리자 회원가입</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-emerald-50 min-h-screen p-4 flex flex-col items-center justify-center">
+
+    <div class="w-11/12 max-w-sm bg-white p-6 rounded-3xl shadow-xl">
+        <h2 class="text-2xl font-bold text-emerald-800 mb-6 text-center">관리자 회원가입</h2>
+        
+        <div class="space-y-4">
+            <input type="text" placeholder="이름" class="w-full p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <input type="text" placeholder="이메일" class="w-full p-4 bg-gray-50 rounded-xl border border-gray-200">
+            
+            <input type="password" id="password" placeholder="비밀번호" class="w-full p-4 bg-gray-50 rounded-xl border border-gray-200">
+            
+            <div class="h-16">
+                <input type="password" id="confirm-password" placeholder="비밀번호 확인" class="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 transition-all">
+                <p id="password-error" class="text-red-500 text-xs mt-1 font-bold hidden">
+                    *비밀번호가 불일치합니다
+                </p>
+            </div>
+
+            <input type="text" placeholder="부대명 또는 부대코드(5자리) [선택]" class="w-full p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <input type="text" placeholder="직책" class="w-full p-4 bg-gray-50 rounded-xl border border-gray-200">
+        </div>
+
+        <button class="w-full mt-8 py-4 bg-emerald-700 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all">
+            관리자 가입 완료
+        </button>
+        
+        <button onclick="history.back()" class="w-full mt-3 py-2 text-gray-400 text-sm font-semibold">
+            뒤로가기
+        </button>
+    </div>
+
+<script>
+    // 페이지가 완전히 로드된 후 스크립트 실행
+    document.addEventListener('DOMContentLoaded', () => {
+        const passwordInput = document.getElementById('password');
+        const confirmInput = document.getElementById('confirm-password');
+        const errorMsg = document.getElementById('password-error');
+
+        function checkPasswordMatch() {
+            const pw = passwordInput.value;
+            const confirm = confirmInput.value;
+
+            // 두 칸 다 입력되었을 때만 비교 시작
+            if (confirm.length > 0) {
+                if (pw !== confirm) {
+                    errorMsg.classList.remove('hidden'); // 경고문 보이기
+                    confirmInput.classList.add('border-red-500'); // 테두리 빨갛게
+                } else {
+                    errorMsg.classList.add('hidden'); // 경고문 숨기기
+                    confirmInput.classList.remove('border-red-500'); // 테두리 정상
+                }
+            } else {
+                errorMsg.classList.add('hidden');
+                confirmInput.classList.remove('border-red-500');
+            }
+        }
+
+        // 이벤트 연결
+        passwordInput.addEventListener('input', checkPasswordMatch);
+        confirmInput.addEventListener('input', checkPasswordMatch);
+    });
+</script>
+
+</body>
+</html>
