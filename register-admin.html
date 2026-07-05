@@ -119,28 +119,48 @@
         document.getElementById('registerBtn').addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('pw').value;
+            const pwCheck = document.getElementById('pwCheck').value;
             const name = document.getElementById('name').value;
             const position = document.getElementById('position').value;
             const newUnitName = document.getElementById('newUnitName').value;
             const unitSelect = document.getElementById('unitSelect').value;
 
-            if (!email || !password || !name) {
+            const pwRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])[a-zA-Z\d!@#$%^&*]{9,15}$/;
+            if (!pwRegex.test(password)) {
+                triggerToast('비밀번호는 9~15자 영문 대소문자, 숫자, 특수문자를 포함해야 합니다.');
+                return;
+            }
+
+    // 2. 비밀번호 확인 검증
+            if (password !== pwCheck) {
+                triggerToast('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            if (!email || !name) {
                 triggerToast('필수 정보를 모두 입력해주세요.');
                 return;
             }
 
+    // 3. 회원가입 시작
             const { data: authData, error: authError } = await sb.auth.signUp({ email, password });
-            if (authError) { triggerToast('가입 실패:\n' + authError.message); return; }
+            if (authError) { triggerToast('가입 실패: ' + authError.message); return; }
 
             let targetUnitCode = unitSelect;
 
+    // 4. 부대 생성 로직
             if (newUnitName) {
-                const newCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+                const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                 const { error: unitError } = await sb.from('units').insert([{ unit_code: newCode, unit_name: newUnitName }]);
-                if (unitError) { triggerToast('부대 생성 실패'); return; }
+        
+                if (unitError) { 
+                    triggerToast('부대 생성 실패: 관리자에게 문의하세요.'); 
+                    return; // 여기서 멈춰야 함!
+                }
                 targetUnitCode = newCode;
             }
 
+    // 5. 프로필 저장
             const { error: profileError } = await sb.from('profiles').insert([{
                 id: authData.user.id,
                 email: email,
@@ -150,8 +170,12 @@
                 position: position
             }]);
 
-            if (profileError) { triggerToast('프로필 저장 실패'); }
-            else { triggerToast('관리자 가입 성공!\n로그인 페이지로 이동합니다.'); setTimeout(() => { window.location.href = 'index.html'; }, 2000); }
+            if (profileError) { 
+                triggerToast('프로필 저장 실패'); 
+            } else { 
+                triggerToast('가입 성공! 로그인 페이지로 이동합니다.'); 
+                setTimeout(() => { window.location.href = 'index.html'; }, 2000); 
+            }
         });
     </script>
 </body>
