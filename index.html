@@ -1,79 +1,126 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>출타 관리 앱 - 로그인</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>출타관리 로그인</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="config.js"></script>
+<script src="toast.js"></script>
+<script src="auth.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard','Noto Sans KR',sans-serif;}
+body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
+.login-box{width:100%;max-width:420px;background:#fff;border-radius:18px;padding:35px 25px;box-shadow:0 10px 25px rgba(0,0,0,.08);}
+.title{text-align:center;font-size:28px;font-weight:700;margin-bottom:30px;}
+.input{width:100%;height:54px;border:1px solid #d9d9d9;border-radius:10px;padding:0 16px;font-size:16px;margin-bottom:15px;outline:none;}
+.input:focus{border-color:#2E5E4E;}
+.login-btn{width:100%;height:54px;border:none;border-radius:10px;background:#2E5E4E;color:#fff;font-size:18px;font-weight:600;cursor:pointer;margin-top:5px;}
+.login-btn:active{transform:scale(.98);}
+.bottom{margin-top:20px;display:flex;justify-content:space-evenly;align-items:center;}
+.user-link{color:#2B7CFF;text-decoration:none;font-size:15px;font-weight:600;}
+.admin-link{color:#F28C28;text-decoration:none;font-size:15px;font-weight:600;}
+.user-link:hover,.admin-link:hover{text-decoration:underline;}
+@media(max-width:420px){.login-box{padding:30px 20px;}.title{font-size:26px;}}
+</style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
-        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">로그인</h2>
-        <input type="email" id="email" placeholder="이메일" class="w-full p-3 mb-4 border rounded">
-        <input type="password" id="password" placeholder="비밀번호" class="w-full p-3 mb-6 border rounded">
-        <button id="loginBtn" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700">로그인</button>
-        
-        <div class="mt-4 text-center">
-            <a href="register-user.html" class="text-sm text-blue-500 mr-4">회원가입</a>
-            <a href="register-admin.html" class="text-sm text-purple-500">관리자 가입</a>
-        </div>
+
+<body>
+
+<div class="login-box">
+    <div class="title">로그인</div>
+    <input type="email" id="email" class="input" placeholder="이메일">
+    <input type="password" id="password" class="input" placeholder="비밀번호">
+    <button id="loginBtn" class="login-btn">로그인</button>
+    <div class="bottom">
+        <a href="register_user.html" class="user-link">회원가입</a>
+        <a href="register_admin.html" class="admin-link">관리자 회원가입</a>
     </div>
+</div>
 
-    <script>
-        // Supabase 설정
-        const supabaseUrl = 'https://hqtjmfrwmgllpyrthxjs.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxdGptZnJ3bWdsbHB5cnRoeGpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMDI3NjEsImV4cCI6MjA5ODY3ODc2MX0.vyY5ljWGH2jtA6nJEPHOjekJW0DDT2gZ-Bor3F9968Q';
-        const sb = supabase.createClient(supabaseUrl, supabaseKey);
+<script>
+const email=document.getElementById("email");
+const password=document.getElementById("password");
+const loginBtn=document.getElementById("loginBtn");
+let loggingIn=false;
 
-        // 토스트 알림 함수
-        function triggerToast(message) {
-            const existingToast = document.getElementById('custom-toast');
-            if (existingToast) existingToast.remove();
+async function moveByRole(user){
+    const {data:profile,error:profileError}=await getProfile(user.id);
 
-            const formattedMessage = message.replace(/\n/g, '<br>');
-            const toast = document.createElement('div');
-            toast.id = 'custom-toast';
-            toast.className = "fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 bg-black/60 transition-opacity duration-500 cursor-pointer";
+    if(profileError){
+        await logout();
+        triggerToast("회원 정보를\n불러오지 못했습니다.");
+        return;
+    }
 
-            toast.innerHTML = `
-                <div class="bg-white p-6 rounded-2xl shadow-2xl text-center max-w-xs w-full">
-                    <p class="text-gray-800 font-bold text-lg mb-2">${formattedMessage}</p>
-                    <p class="text-gray-400 text-xs">(터치로 닫기)</p>
-                </div>
-            `;
+    if(profile.role==="user"){
+        location.replace("schedule_user.html");
+        return;
+    }
 
-            toast.addEventListener('click', () => toast.remove());
-            toast.addEventListener('touchstart', () => toast.remove());
-            document.body.appendChild(toast);
+    const {data:admin,error:adminError}=await getAdminApproval(user.id);
 
-            setTimeout(() => {
-                if (document.body.contains(toast)) {
-                    toast.style.opacity = '0';
-                    setTimeout(() => toast.remove(), 500);
-                }
-            }, 4500);
+    if(adminError){
+        await logout();
+        triggerToast("관리자 정보를\n확인할 수 없습니다.");
+        return;
+    }
+
+    if(admin?.isadmin){
+        location.replace("schedule_admin.html");
+    }else{
+        await logout();
+        triggerToast("관리자 승인 대기중입니다.\n문의 : 010-9541-7788");
+    }
+}
+
+loginBtn.addEventListener("click",async()=>{
+    if(loggingIn) return;
+
+    if(email.value.trim()===""){
+        triggerToast("이메일을 입력하세요.");
+        email.focus();
+        return;
+    }
+
+    if(password.value===""){
+        triggerToast("비밀번호를 입력하세요.");
+        password.focus();
+        return;
+    }
+
+    loggingIn=true;
+    loginBtn.disabled=true;
+
+    try{
+        const {data,error}=await login(email.value.trim(),password.value);
+
+        if(error){
+            triggerToast("이메일 또는 비밀번호가\n올바르지 않습니다.");
+            return;
         }
 
-        // 로그인 로직
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        await moveByRole(data.user);
+    }finally{
+        loggingIn=false;
+        loginBtn.disabled=false;
+    }
+});
 
-            if (!email || !password) {
-                triggerToast('이메일과 비밀번호를\n모두 입력해주세요.');
-                return;
-            }
+[email,password].forEach(el=>{
+    el.addEventListener("keydown",e=>{
+        if(e.key==="Enter") loginBtn.click();
+    });
+});
 
-            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+window.addEventListener("load",async()=>{
+    const {data:{session}}=await getSession();
+    if(session) await moveByRole(session.user);
+});
+</script>
 
-            if (error) {
-                triggerToast('로그인 실패:\n' + error.message);
-            } else {
-                triggerToast('로그인 성공!\n메인 화면으로 이동합니다.');
-                setTimeout(() => { window.location.href = 'schedule.html'; }, 2000);
-            }
-        });
-    </script>
 </body>
 </html>
