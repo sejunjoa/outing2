@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출타</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color"
+          content="#10b981">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="toast.js"></script>
+    <script src="auth.js"></script>
+    <style>
+        /* 출타 종류별 고유 색상 스키마 */
+        .color-weekday { background-color: #3b82f6 !important; }
+        .color-weekend { background-color: #1e3a8a !important; }
+        .color-overnight { background-color: #10b981 !important; }
+        .color-vacation { background-color: #ef4444 !important; }
+
+        /* 모든 출타 공통 줄 바(Bar) 스타일 */
+        .schedule-bar {
+            height: 14px;
+            font-size: 10px;
+            color: white !important;
+            font-weight: 800;
+            text-align: center;
+            line-height: 14px; 
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        /* 띠로 이어지게 만드는 시각 튜닝 클래스 */
+        .bar-single { border-radius: 4px; margin-left: 2px; margin-right: 2px; }
+        .bar-start { border-top-left-radius: 4px; border-bottom-left-radius: 4px; margin-left: 2px; margin-right: -4px; }
+        .bar-mid { border-radius: 0; margin-left: -4px; margin-right: -4px; }
+        .bar-end { border-top-right-radius: 4px; border-bottom-right-radius: 4px; margin-left: -4px; margin-right: 2px; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased relative">
+
+    <button
+        id="installButton"
+        class="hidden fixed bottom-5 right-5 bg-emerald-600 text-white px-5 py-3 rounded-full shadow-lg font-bold z-50 active:scale-95 transition-all">
+        📱 앱 설치
+    </button>
+
+    <div id="past-outing-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl">
+            <h2 class="text-lg font-bold mb-2 text-center">지난 세 달간의 출타</h2>
+            <input type="text" id="modal-search-input" oninput="showPastOutingsModal()" placeholder="출타자 이름 검색..." class="w-full p-2 mb-2 border border-gray-200 rounded-lg text-sm">
+            <div id="modal-filter-container" class="flex flex-wrap gap-x-2 gap-y-2 text-xs font-bold text-gray-500 mb-4 px-1">
+              <button onclick="toggleModalFilter('weekday', this)" class="modal-filter-btn opacity-100 active flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-lg border border-blue-200">
+                  <span class="w-2 h-2 rounded-full color-weekday"></span>평일외출
+              </button>
+              <button onclick="toggleModalFilter('weekend', this)" class="modal-filter-btn opacity-100 active flex items-center gap-1 bg-indigo-100 text-indigo-900 px-2 py-1 rounded-lg border border-indigo-200">
+                  <span class="w-2 h-2 rounded-full color-weekend"></span>주말외출
+              </button>
+              <button onclick="toggleModalFilter('overnight', this)" class="modal-filter-btn opacity-100 active flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2 py-1 rounded-lg border border-emerald-200">
+                  <span class="w-2 h-2 rounded-full color-overnight"></span>외박
+              </button>
+              <button onclick="toggleModalFilter('vacation', this)" class="modal-filter-btn opacity-100 active flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-lg border border-red-200">
+                  <span class="w-2 h-2 rounded-full color-vacation"></span>휴가
+              </button>
+          </div>
+            <div id="past-outing-list" class="max-h-60 overflow-y-auto"></div>
+            <button onclick="document.getElementById('past-outing-modal').classList.add('hidden')" class="w-full mt-5 py-3 bg-gray-100 rounded-xl font-bold text-sm">닫기</button>
+        </div>
+    </div>
+    <div id="page-status" class="max-w-md mx-auto min-h-screen flex flex-col">
+        <div class="sticky top-0 z-20 bg-gray-50 shadow-sm border-b border-gray-200">
+            <header class="bg-white px-4 py-3 flex items-center">
+                <div class="w-24 flex justify-start">
+                    <button onclick="openSettingsModal()" class="h-[30px] px-3 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs flex items-center justify-center" aria-label="설정">설정 ⚙️</button>
+                </div>
+                <h2 id="page-title" class="flex-1 text-center text-lg font-bold tracking-tight truncate">출타</h2>
+                <div class="w-24 flex justify-end">
+                    <button onclick="openModal()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded-xl text-xs active:scale-95 transition-all shadow-xs"> 출타 등록 </button>
+                </div>
+            </header>
+
+            <div class="bg-white p-3">
+                <div class="max-w-md mx-auto">
+                    <nav class="flex gap-2 w-full mb-3">
+                        <div class="flex flex-1 gap-1">
+                            <button id="btn-tab-calendar" onclick="switchViewTab('calendar')" class="py-2 rounded-xl font-bold text-xs bg-blue-600 text-white shadow-xs flex-1">달력</button>
+                            <button id="btn-tab-list" onclick="switchViewTab('list')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">상세</button>
+                        </div>
+                        <div class="flex flex-1 gap-1">
+                            <button id="btn-tab-weekly" onclick="switchViewTab('weekly')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">이번주</button>
+                            <button id="btn-tab-next-weekly" onclick="switchViewTab('next-weekly')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">다음주</button>
+                        </div>
+                    </nav>
+
+                    <input type="text" id="search-input" oninput="filterData()" placeholder="출타자 이름 검색..." 
+                           class="w-full p-2 mb-3 border border-gray-200 rounded-lg text-sm">
+
+                    <div id="filter-container" class="flex flex-wrap gap-x-2 gap-y-2 text-xs font-bold text-gray-500 px-1">
+                        <button onclick="toggleFilter('weekday', this)" class="filter-btn active flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-lg transition-all duration-200 border border-blue-200">
+                            <span class="w-2 h-2 rounded-full color-weekday"></span>평일외출
+                        </button>
+                        <button onclick="toggleFilter('weekend', this)" class="filter-btn active flex items-center gap-1 bg-indigo-100 text-indigo-900 px-2 py-1 rounded-lg transition-all duration-200 border border-indigo-200">
+                            <span class="w-2 h-2 rounded-full color-weekend"></span>주말외출
+                        </button>
+                        <button onclick="toggleFilter('overnight', this)" class="filter-btn active flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2 py-1 rounded-lg transition-all duration-200 border border-emerald-200">
+                            <span class="w-2 h-2 rounded-full color-overnight"></span>외박
+                        </button>
+                        <button onclick="toggleFilter('vacation', this)" class="filter-btn active flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-lg transition-all duration-200 border border-red-200">
+                            <span class="w-2 h-2 rounded-full color-vacation"></span>휴가
+                        </button>
+                        <button id="btn-date-filter" onclick="showDateFilterModal()" class="bg-gray-100 px-3 py-1 rounded-lg text-gray-700 border border-gray-200 transition-all">
+                            기간 설정
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main class="max-w-md mx-auto w-full flex-1">
+            <div class="p-3">
+                <section id="view-calendar">
+                    <div class="flex justify-between items-center px-4 py-2">
+                        <button onclick="changeMonth(-1)" class="w-10 h-10 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 rounded-full transition-all">&lt;</button>
+                        <div id="calendar-title" class="font-bold text-lg"></div>
+                        <button onclick="changeMonth(1)" class="w-10 h-10 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 rounded-full transition-all">&gt;</button>
+                    </div>
+                    <div class="bg-white rounded-2xl p-3 shadow-xs border border-gray-200 overflow-hidden">
+                        <div id="calendar-grid" class="grid grid-cols-7 gap-y-2 text-sm"></div>
+                    </div>
+                </section>
+
+                <section id="view-list" class="hidden space-y-6">
+                    <div>
+                        <h3 class="font-extrabold text-emerald-700 text-sm mb-2 flex items-center gap-1">
+                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            &lt;오늘의 출타&gt;
+                        </h3>
+                        <div id="today-list" class="space-y-2"></div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-extrabold text-blue-700 text-sm mb-2 flex items-center gap-1">
+                            <span class="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
+                            &lt;현재 진행 중인 출타&gt;
+                        </h3>
+                        <div id="current-list" class="space-y-2"></div>
+                    </div>
+                    <hr class="border-gray-200">
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-3 text-sm">전체 출타 정보 명단</h3>
+                        <div id="integrated-list" class="space-y-2"></div>
+                    </div>
+                </section>
+            
+                <section id="view-weekly" class="hidden p-4 max-w-md mx-auto w-full"></section>
+                <section id="view-next-weekly" class="hidden p-4 max-w-md mx-auto w-full"></section>
+            </div>
+        </main>
+    </div>
+
+    <div id="confirm-modal" class="fixed inset-0 hidden flex items-center justify-center z-[9999]">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-80 text-center">
+            <h3 class="text-lg font-bold mb-4">정말 삭제하시겠습니까?</h3>
+            <p class="text-sm text-gray-500 mb-6">이 작업은 되돌릴 수 없습니다.</p>
+            <div class="flex justify-center gap-4">
+                <button onclick="hideConfirmModal()" class="px-4 py-2 bg-gray-200 rounded">취소</button>
+                <button onclick="executeSoftDelete()" class="px-4 py-2 bg-red-500 text-white rounded">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="register-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                <h3 id="modal-title" class="text-lg font-bold text-gray-900">새 출타 등록</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">출타 형태</label>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="type-group" value="weekday" onclick="handleCheckbox(this)" class="accent-blue-600"> 평일외출
+                    </label>
+                    <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="type-group" value="weekend" onclick="handleCheckbox(this)" class="accent-indigo-900"> 주말외출
+                    </label>
+                    <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="type-group" value="overnight" onclick="handleCheckbox(this)" class="accent-emerald-600"> 외박
+                    </label>
+                    <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="type-group" value="vacation" onclick="handleCheckbox(this)" class="accent-red-500"> 휴가
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">행선지</label>
+                <input type="text" id="input-destination" placeholder="행선지를 입력하세요" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">출타 기간 설정</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block">시작일(출발일)</span>
+                        <input type="date" id="input-start-date" onchange="syncStartDate(this.value)" class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                    </div>
+                    <div class="relative" onclick="handleEndDateClick(event)">
+                        <span class="text-[10px] text-gray-400 block">종료일(도착일)</span>
+                        <input type="date" id="input-end-date" class="w-full p-2 border border-gray-300 rounded-lg text-xs disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button id="btn-delete" onclick="showConfirmModal()" class="hidden flex-1 py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm">삭제</button>
+                <button onclick="closeModal()" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">취소</button>
+                <button id="btn-submit" onclick="handleFormSubmit()" class="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-xs">완료</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="date-filter-modal" class="fixed inset-0 hidden flex items-center justify-center z-[9999] bg-black/50 p-4">
+        <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm">
+            <h3 class="text-lg font-bold mb-4">기간 설정</h3>
+        
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <input type="date" id="filter-start" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                <input type="date" id="filter-end" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+            </div>
+        
+            <div class="flex gap-2 mb-6">
+                <button onclick="setDuration(5)" class="flex-1 bg-gray-100 py-1.5 rounded-lg text-xs font-bold">+5일</button>
+                <button onclick="setDuration(7)" class="flex-1 bg-gray-100 py-1.5 rounded-lg text-xs font-bold">+7일</button>
+                <button onclick="setDuration(15)" class="flex-1 bg-gray-100 py-1.5 rounded-lg text-xs font-bold">+15일</button>
+            </div>
+        
+            <div class="flex gap-2">
+                <button onclick="clearDateFilter()" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">해제</button>
+                <button onclick="hideDateFilterModal()" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">취소</button>
+                <button onclick="applyDateFilter()" class="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm">적용</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="fixed inset-0 hidden flex items-center justify-center z-[9999] bg-black/50 p-4">
+        <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+                <h3 class="text-lg font-bold text-gray-900">설정</h3>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">입대일</label>
+                    <input type="date" id="settings-enlist-date" onchange="saveProfileSettings()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">전역일</label>
+                    <input type="date" id="settings-discharge-date" onchange="saveProfileSettings()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">출타별 주 행선지</label>
+                    <div class="grid grid-cols-1 gap-2">
+                        <input type="text" id="settings-weekday-destination" oninput="handleSettingsInput()" placeholder="평일외출 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                        <input type="text" id="settings-weekend-destination" oninput="handleSettingsInput()" placeholder="주말외출 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                        <input type="text" id="settings-overnight-destination" oninput="handleSettingsInput()" placeholder="외박 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                        <input type="text" id="settings-vacation-destination" oninput="handleSettingsInput()" placeholder="휴가 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-1">출타 형태를 선택하면 해당 형태의 주 행선지가 먼저 입력됩니다. 등록 직전 자유롭게 수정할 수 있습니다.</p>
+                </div>
+
+                <p id="settings-save-status" class="text-xs text-emerald-600 min-h-[16px]"></p>
+
+                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+                    <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
+                    <button onclick="handleDeleteAccount()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all">회원탈퇴</button>
+                </div>
+
+                <div class="pt-3 border-t border-gray-100 text-center text-[11px] text-gray-400 leading-relaxed">
+                    개발자 문의 : 010-9541-7788 김세준
+                </div>
+            </div>
+
+            <button onclick="closeSettingsModal()" class="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg hidden transition-opacity duration-300 z-[9999]">
+            <span id="toast-message" class="whitespace-pre-wrap"></span>
+    </div>
+
+    </body>
+
+    <script>
+
+
+        let outData = [];
+        let currentUser = null;
+        let currentProfile = null;
+        let currentUnit = null;
+        let currentUserName = "";
+        let settingsSaveTimer = null;
+        let isSavingSettings = false;
+
+        const DESTINATION_FIELDS = {
+            weekday: 'weekday_destination',
+            weekend: 'weekend_destination',
+            overnight: 'overnight_destination',
+            vacation: 'vacation_destination'
+        };
+
+        function getSelectedOutingType(){
+            return document.querySelector('input[name="type-group"]:checked')?.value || null;
+        }
+
+        function getDefaultDestination(type){
+            if(!type || !currentProfile) return '';
+            return currentProfile[DESTINATION_FIELDS[type]] || '';
+        }
+
+        function syncDestinationBySelectedType(force=false){
+            const destinationInput = document.getElementById('input-destination');
+            if(!destinationInput) return;
+
+            const selectedType = getSelectedOutingType();
+            const defaultDestination = getDefaultDestination(selectedType);
+
+            if(force || destinationInput.value.trim()===''){
+                destinationInput.value = defaultDestination;
+            }
+        }
+
+        function escapeHtml(value){
+            return String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function getCurrentUserName(){
+            return currentProfile?.name
+                || currentProfile?.display_name
+                || currentUser?.user_metadata?.display_name
+                || currentUser?.email
+                || "";
+        }
+
+        function canModify(item){
+            return currentUser && item.user_id === currentUser.id;
+        }
+
+        function getDestinationLine(item){
+            return item.destination ? `<p class="text-xs text-gray-500 mt-1 truncate">행선지: ${escapeHtml(item.destination)}</p>` : "";
+        }
+
+        const now = new Date();
+        let currentYear = now.getFullYear();
+        let currentMonth = now.getMonth();
+
+
+        let modalFilters = new Set(['weekday', 'weekend', 'overnight', 'vacation']);
+
+        function toggleModalFilter(type, btnElement) {
+            if (modalFilters.has(type)) {
+                modalFilters.delete(type);
+                btnElement.classList.remove('opacity-100');
+                btnElement.classList.add('opacity-30'); // 투명도만 조정
+            } else {
+                modalFilters.add(type);
+                btnElement.classList.remove('opacity-30');
+                btnElement.classList.add('opacity-100'); // 원래 투명도 복구
+            }
+            showPastOutingsModal();
+        }
+
+
+        function getTodayString() {
+            const d = new Date();
+            return d.getFullYear() + "-"
+                + String(d.getMonth() + 1).padStart(2, "0") + "-"
+                + String(d.getDate()).padStart(2, "0");
+        }
+
+        function showConfirmModal() {
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        function hideConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+        }
+
+        async function executeSoftDelete() {
+            const { error } = await sb
+                .from("outing")
+                .update({
+                    start: '1900-01-01',
+                    end: '1900-01-01',
+                    type: 'weekday'
+                })
+                .eq('id', currentEditId)
+                .eq('user_id', currentUser.id);
+
+            if (error) {
+                alert("삭제 실패: " + error.message);
+                return;
+            }
+
+            hideConfirmModal();
+            closeModal();
+            triggerToast('삭제되었습니다.');
+            await loadData();
+            renderListTab();
+            renderCalendar();
+        }
+
+
+        async function loadData(){
+            await autoPurgeExpiredData();
+
+            if(!currentProfile?.unit_id){
+                outData=[];
+                return;
+            }
+
+            const {data,error}=await sb
+                .from("outing")
+                .select("*")
+                .eq("unit_id", currentProfile.unit_id)
+                .order("start");
+            if(error){
+                console.error(error);
+                triggerToast("출타 정보를 불러오지 못했습니다.");
+                return;
+            }
+            outData=data || [];
+        }
+
+        async function autoPurgeExpiredData() {
+            // 오래된 출타 삭제는 Supabase DB Cron에서 처리합니다.
+            return;
+        }
+
+        async function updateRegistration() {
+            const destination = document.getElementById('input-destination').value.trim();
+            const startDate = document.getElementById('input-start-date').value;
+            const endDate = document.getElementById('input-end-date').value;
+            const checkedType = document.querySelector('input[name="type-group"]:checked');
+
+            if (!destination || !startDate || !endDate || !checkedType) {
+                triggerToast('모든 항목을\n입력해주세요.');
+                return;
+            }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                triggerToast('출발일이 종료일보다\n늦을 수 없습니다.');
+                return;
+            }
+
+            const { error } = await sb
+                .from("outing")
+                .update({
+                    name: currentUserName,
+                    destination: destination,
+                    start: startDate,
+                    end: endDate,
+                    type: checkedType.value
+                })
+                .eq('id', currentEditId)
+                .eq('user_id', currentUser.id);
+
+            if (error) {
+                triggerToast('수정 실패: ' + error.message);
+                return;
+            }
+
+            closeModal();
+            triggerToast('수정되었습니다.');
+            await loadData();
+            renderListTab();
+            renderCalendar();
+        }
+
+        async function handleFormSubmit() {
+            if (currentEditId) {
+                await updateRegistration();
+            } else {
+                await submitRegistration();
+            }
+        }
+
+        
+
+        function getFilteredData() {
+            let filtered = outData.filter(item => activeFilters.has(item.type))
+                                  .filter(item => (item.name || "").toLowerCase().includes(searchQuery.toLowerCase()));
+    
+            // 날짜 필터가 설정되어 있을 경우에만 필터링 추가
+            if (dateFilter.start && dateFilter.end) {
+                filtered = filtered.filter(item => {
+                    // item.start와 item.end가 필터 범위 내에 겹치는 경우
+                    return item.start <= dateFilter.end && item.end >= dateFilter.start;
+                });
+            }
+    
+            return filtered;
+        }
+
+
+
+        let scrollPos = {viewCalendar: 0, viewList: 0, viewWeekly: 0};
+        function switchViewTab(viewType) {
+            // 1. 현재 스크롤 위치 저장
+            const currentView = document.querySelector('section:not(.hidden)');
+            if (currentView) {
+                scrollPos[currentView.id] = window.scrollY;
+            }
+
+            // 2. 모든 버튼의 스타일을 초기화 (flex-1 유지)
+            const btnIds = ['btn-tab-calendar', 'btn-tab-list', 'btn-tab-weekly', 'btn-tab-next-weekly'];
+            btnIds.forEach(id => {
+                const btn = document.getElementById(id);
+                btn.className = 'py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1';
+            });
+            
+            // 3. 클릭된 탭 버튼 활성화 (flex-1 유지)
+            const activeBtn = document.getElementById(`btn-tab-${viewType === 'next-weekly' ? 'next-weekly' : viewType}`);
+            activeBtn.className = 'py-2 rounded-xl font-bold text-xs bg-blue-600 text-white shadow-xs flex-1';
+
+            // 4. 모든 뷰 숨김 처리
+            const views = ['view-calendar', 'view-list', 'view-weekly', 'view-next-weekly'];
+            views.forEach(id => document.getElementById(id).classList.add('hidden'));
+            
+            // 5. 선택된 뷰 표시
+            const targetView = document.getElementById(`view-${viewType}`);
+            targetView.classList.remove('hidden');
+
+            // 6. 데이터 재필터링 및 렌더링
+            const currentData = getFilteredData();
+            
+            if(viewType === 'calendar') {
+                setTimeout(() => window.scrollTo(0, scrollPos.viewCalendar || 0), 50);
+                renderCalendar(currentData);
+            } else if(viewType === 'list') {
+                setTimeout(() => window.scrollTo(0, scrollPos.viewList || 0), 50);
+                renderListTab(currentData);
+            } else if(viewType === 'weekly') {
+                setTimeout(() => window.scrollTo(0, scrollPos.viewWeekly || 0), 50);
+                renderWeeklyTab(currentData);
+            } else if(viewType === 'next-weekly') {
+                setTimeout(() => window.scrollTo(0, scrollPos.viewNextWeekly || 0), 50);
+                renderNextWeeklyTab(currentData);
+            }
+        }
+
+        let searchQuery = "";
+
+        let activeFilters = new Set(['weekday', 'weekend', 'overnight', 'vacation']);
+
+        function toggleFilter(type, btnElement) {
+            const isActive = activeFilters.has(type);
+    
+            if (isActive) {
+                activeFilters.delete(type);
+                btnElement.classList.remove('bg-blue-50', 'text-blue-600'); // 예시 클래스 제거
+                btnElement.style.opacity = '0.4';
+            } else {
+                activeFilters.add(type);
+                btnElement.classList.add('bg-blue-50', 'text-blue-600');
+                btnElement.style.opacity = '1';
+            }
+            filterData();
+        }
+
+        function filterData() {
+            searchQuery = document.getElementById('search-input').value;
+            const filteredData = getFilteredData();
+            
+            // 현재 활성 탭에 맞춰 재렌더링
+            const activeView = document.querySelector('section:not(.hidden)').id;
+            if (activeView === 'view-calendar') renderCalendar(filteredData);
+            else if (activeView === 'view-list') renderListTab(filteredData);
+            else if (activeView === 'view-weekly') renderWeeklyTab(filteredData);
+            else if (activeView === 'view-next-weekly') renderNextWeeklyTab(filteredData);
+        }
+
+        let dateFilter = { start: null, end: null };
+
+        function showDateFilterModal() {
+            document.getElementById('date-filter-modal').classList.remove('hidden');
+            // 시작일 기본값 오늘로 설정
+            if (!document.getElementById('filter-start').value) {
+                document.getElementById('filter-start').value = getTodayString();
+            }
+        }
+
+        function hideDateFilterModal() {
+            document.getElementById('date-filter-modal').classList.add('hidden');
+        }
+
+        function setDuration(days) {
+            const start = new Date(document.getElementById('filter-start').value);
+            const end = new Date(start);
+            end.setDate(start.getDate() + days);
+            document.getElementById('filter-end').value = end.toISOString().split('T')[0];
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return "";
+            const [year, month, day] = dateString.split('-');
+            return `${month}/${day}`;
+        }
+
+
+        function applyDateFilter() {
+            const startVal = document.getElementById('filter-start').value;
+            const endVal = document.getElementById('filter-end').value;
+
+            if (!startVal || !endVal) {
+                triggerToast("시작일과 종료일을\n모두 선택해주세요.");
+                return;
+            }
+
+            dateFilter.start = startVal;
+            dateFilter.end = endVal;
+
+            // 버튼 텍스트를 "MM/DD - MM/DD" 형식으로 변경
+            const displayStart = formatDate(startVal);
+            const displayEnd = formatDate(endVal);
+            document.getElementById('btn-date-filter').innerText = `${displayStart} - ${displayEnd}`;
+    
+            // 버튼 스타일 강조 (선택 사항)
+            document.getElementById('btn-date-filter').classList.add('bg-emerald-100', 'text-emerald-800', 'border-emerald-200');
+
+            hideDateFilterModal();
+            filterData(); // 데이터 재필터링
+        }
+
+        function clearDateFilter() {
+            dateFilter = { start: null, end: null };
+    
+            // 버튼 텍스트를 원래대로 복구
+            document.getElementById('btn-date-filter').innerText = '기간 설정';
+            document.getElementById('btn-date-filter').classList.remove('bg-emerald-100', 'text-emerald-800', 'border-emerald-200');
+    
+            document.getElementById('filter-start').value = '';
+            document.getElementById('filter-end').value = '';
+    
+            hideDateFilterModal();
+            filterData();
+
+        }
+
+
+
+        function openSettingsModal(){
+            if(!currentProfile) return;
+
+            document.getElementById('settings-enlist-date').value = currentProfile.enlist_date || '';
+            document.getElementById('settings-discharge-date').value = currentProfile.discharge_date || '';
+            document.getElementById('settings-weekday-destination').value = currentProfile.weekday_destination || '';
+            document.getElementById('settings-weekend-destination').value = currentProfile.weekend_destination || '';
+            document.getElementById('settings-overnight-destination').value = currentProfile.overnight_destination || '';
+            document.getElementById('settings-vacation-destination').value = currentProfile.vacation_destination || '';
+            document.getElementById('settings-save-status').innerText = '';
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal(){
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        async function handleLogout(){
+            const ok = confirm('로그아웃 하시겠습니까?');
+            if(!ok) return;
+
+            const {error} = await logout();
+            if(error){
+                triggerToast('로그아웃 실패\n' + error.message);
+                return;
+            }
+
+            location.replace('index.html');
+        }
+
+        async function handleDeleteAccount(){
+            const firstOk = confirm('회원탈퇴 하시겠습니까?\n내 계정과 내 출타 기록이 삭제됩니다.');
+            if(!firstOk) return;
+
+            const secondOk = confirm('정말 탈퇴하시겠습니까?\n이 작업은 되돌릴 수 없습니다.');
+            if(!secondOk) return;
+
+            const {error} = await sb.rpc('delete_my_account');
+            if(error){
+                console.error(error);
+                triggerToast('회원탈퇴 실패\n' + error.message);
+                return;
+            }
+
+            await logout();
+            triggerToast('회원탈퇴가 완료되었습니다.');
+
+            setTimeout(()=>{
+                location.replace('index.html');
+            }, 1200);
+        }
+
+        function handleSettingsInput(){
+            clearTimeout(settingsSaveTimer);
+            document.getElementById('settings-save-status').innerText = '저장 대기 중...';
+            settingsSaveTimer = setTimeout(saveProfileSettings, 600);
+        }
+
+        async function saveProfileSettings(){
+            if(!currentUser || isSavingSettings) return;
+
+            clearTimeout(settingsSaveTimer);
+            isSavingSettings = true;
+
+            const updates = {
+                enlist_date: document.getElementById('settings-enlist-date').value || null,
+                discharge_date: document.getElementById('settings-discharge-date').value || null,
+                weekday_destination: document.getElementById('settings-weekday-destination').value.trim(),
+                weekend_destination: document.getElementById('settings-weekend-destination').value.trim(),
+                overnight_destination: document.getElementById('settings-overnight-destination').value.trim(),
+                vacation_destination: document.getElementById('settings-vacation-destination').value.trim()
+            };
+
+            const status = document.getElementById('settings-save-status');
+            status.innerText = '저장 중...';
+
+            const {error} = await sb
+                .from('profiles')
+                .update(updates)
+                .eq('id', currentUser.id);
+
+            isSavingSettings = false;
+
+            if(error){
+                console.error(error);
+                status.innerText = '저장 실패';
+                triggerToast('설정 저장 실패\n' + error.message);
+                return;
+            }
+
+            currentProfile = {
+                ...currentProfile,
+                ...updates
+            };
+
+            syncDestinationBySelectedType(false);
+
+            status.innerText = '저장 완료';
+            setTimeout(()=>{
+                if(status.innerText === '저장 완료') status.innerText = '';
+            }, 1500);
+        }
+
+        function openModal() { 
+            currentEditId = null;
+            clearForm();
+            document.getElementById('modal-title').innerText = '새 출타 등록';
+            document.getElementById('btn-delete').classList.add('hidden');
+            document.getElementById('register-modal').classList.remove('hidden');
+            document.getElementById('input-start-date').value = getTodayString();
+            syncDestinationBySelectedType(true);
+            setTimeout(()=>document.getElementById('input-destination').focus(), 50);
+        }
+
+        
+
+        function handleCheckbox(checkbox) {
+            const checkboxes = document.getElementsByName('type-group');
+            checkboxes.forEach((item) => { if (item !== checkbox) item.checked = false; });
+
+            const endDateInput = document.getElementById('input-end-date');
+            const startDateValue = document.getElementById('input-start-date').value;
+
+            if (checkbox.checked) {
+                syncDestinationBySelectedType(true);
+
+                if (checkbox.value === 'weekday' || checkbox.value === 'weekend') {
+                    endDateInput.disabled = true;
+                    if (startDateValue) {
+                        endDateInput.value = startDateValue;
+                        if(checkbox.value === 'weekday') validateWeekdayDate(startDateValue);
+                        if(checkbox.value === 'weekend') validateWeekendOrOvernightDate('weekend', startDateValue);
+                    }
+                } else if (checkbox.value === 'overnight') {
+                    endDateInput.disabled = true;
+                    if (startDateValue) {
+                        endDateInput.value = getNextDateString(startDateValue);
+                        validateWeekendOrOvernightDate('overnight', startDateValue);
+                    }
+                } else {
+                    endDateInput.disabled = false;
+                }
+            } else {
+                endDateInput.disabled = false;
+                document.getElementById('input-destination').value = '';
+            }
+        }
+
+        function getNextDateString(dateStr) {
+            const parts = dateStr.split('-');
+            const date = new Date(parts[0], parts[1] - 1, parts[2]);
+            date.setDate(date.getDate() + 1);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        function validateWeekdayDate(dateVal) {
+            if(!dateVal) return true;
+            const parts = dateVal.split('-');
+            const dayOfWeek = new Date(parts[0], parts[1] - 1, parts[2]).getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                triggerToast('평일외출은 평일에만\n나갈 수 있습니다.');
+                return false;
+            }
+            return true;
+        }
+
+        function validateWeekendOrOvernightDate(type, dateVal) {
+            if(!dateVal) return;
+            const parts = dateVal.split('-');
+            const dayOfWeek = new Date(parts[0], parts[1] - 1, parts[2]).getDay();
+
+            if (type === 'weekend') {
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    triggerToast('외출일이 주말이 아닙니다.\n확인해주시기 바랍니다.');
+                }
+            } else if (type === 'overnight') {
+                if (dayOfWeek !== 6) {
+                    triggerToast('외박일이 주말이 아닙니다.\n확인해주시기 바랍니다.');
+                }
+            }
+        }
+
+        function syncStartDate(val) {
+            if (!val) return;
+            const checkedType = document.querySelector('input[name="type-group"]:checked');
+            const day = new Date(val).getDay(); // 0:일, 1:월, 2:화, 3:수, 4:목, 5:금, 6:토
+
+            if (checkedType) {
+                if (checkedType.value === 'weekend' && day !== 0 && day !== 6) {
+                    triggerToast('주말외출 시작일이 평일입니다.\n휴무일인지 확인하시기 바랍니다.');
+                } else if (checkedType.value === 'overnight' && day !== 6) {
+                    triggerToast('외박 시작일이 평일입니다.\n휴무일인지 확인하시기 바랍니다.');
+                }
+                // 종료일 자동 세팅 로직 유지
+                document.getElementById('input-end-date').value = (checkedType.value === 'overnight') ? getNextDateString(val) : val;
+            }
+        }
+
+        function handleEndDateClick(e) {
+            const endDateInput = document.getElementById('input-end-date');
+            const checkedType = document.querySelector('input[name="type-group"]:checked');
+            
+            if (endDateInput.disabled && checkedType) {
+                e.preventDefault();
+                if (checkedType.value === 'weekday' || checkedType.value === 'weekend') {
+                    triggerToast('외출은 하루만\n나갈 수 있습니다.');
+                } else if (checkedType.value === 'overnight') {
+                    triggerToast('외박은 1박 2일만\n설정 가능합니다.');
+                }
+            }
+        }
+
+        function changeMonth(offset) {
+            currentMonth += offset;
+            if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            
+            // 핵심: 달이 바뀔 때 현재 필터링된 데이터를 가져와서 달력을 다시 그립니다.
+            renderCalendar(getFilteredData());
+        }
+
+        async function initPage(){
+            const authInfo = await requireUser();
+            if(!authInfo) return;
+
+            currentUser = authInfo.user;
+            currentProfile = authInfo.profile;
+            currentUserName = getCurrentUserName();
+
+            if(!currentProfile?.unit_id){
+                triggerToast("소속 부대 정보가 없습니다.\n관리자에게 문의하세요.");
+                return;
+            }
+
+            const {data:unitData,error:unitError}=await sb
+                .from("units")
+                .select("id,unit_name,unit_code")
+                .eq("id", currentProfile.unit_id)
+                .maybeSingle();
+
+            if(unitError || !unitData){
+                triggerToast("부대 정보를 불러오지 못했습니다.");
+                return;
+            }
+
+            currentUnit = unitData;
+            document.title = `${currentUnit.unit_name} 출타`;
+            document.getElementById("page-title").innerText = `${currentUnit.unit_name} 출타`;
+
+            await loadData();
+            renderCalendar();
+            renderListTab();
+            subscribeRealtime();
+        }
+
+        // 초기 구동 자동화 실행문
+        window.onload = initPage;
+
+        function clearForm() {
+            document.getElementById('input-destination').value = '';
+            document.getElementsByName('type-group').forEach(cb => cb.checked = false);
+            document.getElementById('input-start-date').value = '';
+            const endDate = document.getElementById('input-end-date');
+            endDate.value = '';
+            endDate.disabled = false;
+        }
+
+        async function submitRegistration() {
+            const destination = document.getElementById('input-destination').value.trim();
+            const checkedType = document.querySelector('input[name="type-group"]:checked');
+            const startDate = document.getElementById('input-start-date').value;
+            const endDate = document.getElementById('input-end-date').value;
+
+            if (!destination || !checkedType || !startDate || !endDate) {
+                triggerToast('모든 항목을\n입력해주세요.');
+                return;
+            }
+
+            const day = new Date(startDate).getDay();
+            
+            if (checkedType.value === 'weekday' && (day === 0 || day === 6)) {
+                triggerToast('평일외출은 주말에\n등록할 수 없습니다.');
+                return;
+            }
+
+            if (checkedType.value === 'vacation' && new Date(endDate) < new Date(startDate)) {
+                triggerToast('휴가 종료일은 시작일보다\n빠를 수 없습니다.');
+                return;
+            }
+
+            const { error } = await sb.from("outing").insert([{
+                user_id: currentUser.id,
+                unit_id: currentProfile.unit_id,
+                name: currentUserName,
+                destination: destination,
+                type: checkedType.value,
+                start: startDate,
+                end: endDate
+            }]);
+
+            if (error) {
+                triggerToast('출타가 등록되지 않았습니다.\n인터넷 연결을\n확인해주시기 바랍니다.');
+            } else {
+                triggerToast('출타가 등록되었습니다.');
+                closeModal();
+                await loadData();
+                renderListTab();
+                renderCalendar();
+            }
+        }
+
+        let pressTimer;
+        let currentEditId = null;
+
+        function setupLongPress(element, item) {
+            let pressTimer;
+            
+            const start = () => {
+                pressTimer = setTimeout(() => {
+                    if(!canModify(item)){
+                        triggerToast('본인의 출타만\n수정 또는 삭제할 수 있습니다.');
+                        return;
+                    }
+                    openEditModal(item);
+                }, 600);
+            };
+            const clear = () => clearTimeout(pressTimer);
+
+            element.addEventListener('touchstart', start);
+            element.addEventListener('touchend', clear);
+            element.addEventListener('touchmove', clear);
+            element.addEventListener('mousedown', start);
+            element.addEventListener('mouseup', clear);
+            element.addEventListener('mouseleave', clear);
+        }
+
+        function openEditModal(item) {
+            if(!canModify(item)){
+                triggerToast('본인의 출타만\n수정 또는 삭제할 수 있습니다.');
+                return;
+            }
+
+            currentEditId = item.id;
+            document.getElementById('modal-title').innerText = '출타 정보 수정';
+            document.getElementById('btn-delete').classList.remove('hidden');
+    
+            document.getElementById('input-destination').value = item.destination || '';
+            document.getElementById('input-start-date').value = item.start;
+            document.getElementById('input-end-date').value = item.end;
+
+            document.getElementsByName('type-group').forEach(cb => {
+                cb.checked = cb.value === item.type;
+            });
+
+            const endDateInput = document.getElementById('input-end-date');
+            endDateInput.disabled = ['weekday','weekend','overnight'].includes(item.type);
+
+            document.getElementById('register-modal').classList.remove('hidden');
+        }
+
+
+        function closeModal() {
+            document.getElementById('register-modal').classList.add('hidden');
+            document.getElementById('btn-delete').classList.add('hidden');
+    
+            // 수정: 쿼리셀렉터 대신 정확한 ID 참조 사용
+            document.getElementById('modal-title').innerText = '새 출타 등록';
+    
+            currentEditId = null;
+            clearForm(); 
+        }
+
+        function renderCalendar(dataFromFilter) {
+            autoPurgeExpiredData();
+            const grid = document.getElementById('calendar-grid');
+            const title = document.getElementById('calendar-title');
+            grid.innerHTML = '';
+            title.innerText = `${currentYear}년 ${String(currentMonth + 1).padStart(2, '0')}월`;
+
+            const daysHeader = ['월', '화', '수', '목', '금', '토', '일'];
+            daysHeader.forEach((day, index) => {
+                const div = document.createElement('div');
+                div.className = 'text-center text-xs font-bold text-gray-400 mb-2';
+                if (index === 5) div.className = 'text-center text-xs font-bold text-blue-600 mb-2';
+                if (index === 6) div.className = 'text-center text-xs font-bold text-red-500 mb-2';
+                div.innerText = day;
+                grid.appendChild(div);
+            });
+
+            const filteredData = dataFromFilter || outData;
+            
+            const sortedData = [...filteredData].sort((a, b) => new Date(a.start) - new Date(b.start));
+            const slotMap = new Map();
+            
+            sortedData.forEach(item => {
+                const usedSlots = new Set();
+                sortedData.forEach(other => {
+                    if (slotMap.has(other.id) && !(item.end < other.start || item.start > other.end)) {
+                        usedSlots.add(slotMap.get(other.id));
+                    }
+                });
+                for (let s = 0; s < 20; s++) {
+                    if (!usedSlots.has(s)) {
+                        slotMap.set(item.id, s);
+                        break;
+                    }
+                }
+            });
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const adjustedFirstDay = (firstDay === 0) ? 6 : firstDay - 1;
+            const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const prevLastDate = new Date(currentYear, currentMonth, 0).getDate();
+
+            for (let i = adjustedFirstDay; i > 0; i--) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'text-gray-300 min-h-[85px] p-1 border-t border-gray-100 select-none';
+                dayDiv.innerText = prevLastDate - i + 1;
+                grid.appendChild(dayDiv);
+            }
+
+            for (let date = 1; date <= lastDate; date++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'min-h-[85px] h-auto p-1 border-t border-gray-100 flex flex-col justify-start pb-2';
+                const dateNo = document.createElement('div');
+                dateNo.className = 'font-semibold text-xs text-left mb-1 px-1';
+                dateNo.innerText = date;
+                const currentDayOfWeek = new Date(currentYear, currentMonth, date).getDay();
+                if (currentDayOfWeek === 0) dateNo.classList.add('text-red-500');
+                if (currentDayOfWeek === 6) dateNo.classList.add('text-blue-600');
+                dayDiv.appendChild(dateNo);
+
+                const checkStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                const todaysOutings = filteredData.filter(item => checkStr >= item.start && checkStr <= item.end);
+
+                let currentSlot = 0;
+                todaysOutings.sort((a, b) => (slotMap.get(a.id) || 0) - (slotMap.get(b.id) || 0));
+
+                todaysOutings.forEach(item => {
+                    const itemSlot = slotMap.get(item.id) || 0;
+                    while (currentSlot < itemSlot) {
+                        const emptyRow = document.createElement('div');
+                        emptyRow.className = 'h-[16px] mb-0.5 w-full';
+                        dayDiv.appendChild(emptyRow);
+                        currentSlot++;
+                    }
+
+                    const row = document.createElement('div');
+                    row.className = 'h-[16px] mb-0.5 w-full';
+                    const bar = document.createElement('div');
+                    bar.className = `schedule-bar color-${item.type}`;
+
+                    const isOvernightEnd = (item.type === 'overnight' && checkStr === item.end);
+            
+                    // 수정된 이름 표시 조건: 시작일 또는 종료일인 경우에만 이름 표시
+                    if ((checkStr === item.start || checkStr === item.end) && !isOvernightEnd) {
+                        bar.innerText = item.name;
+                    }
+            
+                    if (item.start === item.end) bar.classList.add('bar-single');
+                    else if (checkStr === item.start) bar.classList.add('bar-start');
+                    else if (checkStr === item.end) bar.classList.add('bar-end');
+                    else bar.classList.add('bar-mid');
+            
+                    row.appendChild(bar);
+                    dayDiv.appendChild(row);
+                    currentSlot++;
+                });
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        function createDayCell(date, isCurrentMonth) {
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'min-h-[85px] p-1 border-t border-gray-100 flex flex-col relative';
+            
+            const dateNo = document.createElement('div');
+            dateNo.className = `font-semibold text-xs mb-1 px-1 ${!isCurrentMonth ? 'text-gray-300' : ''}`;
+            dateNo.innerText = date;
+            dayDiv.appendChild(dateNo);
+
+            if (isCurrentMonth) {
+                const checkStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                
+                // 1. 해당 날짜에 포함되는 모든 출타를 가져옴
+                let todaysOutings = outData.filter(item => checkStr >= item.start && checkStr <= item.end);
+                
+                // 2. 정렬 (start 날짜가 빠른 순서대로 정렬하면 줄이 엉키지 않음)
+                todaysOutings.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+                // 3. 4개의 고정 슬롯을 순서대로 채움
+                for (let i = 0; i < 4; i++) {
+                    const row = document.createElement('div');
+                    row.className = 'h-[16px] mb-0.5 w-full';
+                    
+                    const item = todaysOutings[i];
+                    if (item) {
+                        const bar = document.createElement('div');
+                        bar.className = `schedule-bar color-${item.type}`;
+                        
+                        if (checkStr === item.start) {
+                            bar.innerText = item.name;
+                        }
+
+                        if (item.start === item.end) bar.classList.add('bar-single');
+                        else if (checkStr === item.start) bar.classList.add('bar-start');
+                        else if (checkStr === item.end) bar.classList.add('bar-end');
+                        else bar.classList.add('bar-mid');
+                        
+                        row.appendChild(bar);
+                    }
+                    dayDiv.appendChild(row);
+                }
+            }
+            return dayDiv;
+        }
+
+        function getWeeklyRange() {
+            const now = new Date();
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(now.setDate(diff));
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            return {
+                start: monday.toISOString().split('T')[0],
+                end: sunday.toISOString().split('T')[0]
+            };
+        }
+
+        function renderWeeklyTab(dataFromFilter) {
+            const rawData = dataFromFilter || outData || [];
+            const weeklyRange = (typeof getWeeklyRange === 'function') ? getWeeklyRange() : { start: '1900-01-01', end: '2100-01-01' };
+            const weeklyContainer = document.getElementById('view-weekly');
+            
+            weeklyContainer.innerHTML = `
+                <h3 class="font-bold text-sm mb-3 px-2">이번 주 출타 현황</h3>
+                <div class="space-y-2"></div>
+            `;
+            const listWrapper = weeklyContainer.querySelector('.space-y-2');
+            
+            const typeBgClasses = { weekday:'color-weekday', weekend:'color-weekend', overnight:'color-overnight', vacation:'color-vacation' };
+            const typeNames = { weekday: '평일외출', weekend: '주말외출', overnight: '외박출발', vacation: '휴가출발' };
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+
+            const filteredData = rawData.filter(item => item.start >= weeklyRange.start && item.start <= weeklyRange.end);
+
+            filteredData.forEach(item => {
+                const itemDate = new Date(item.start);
+                const dayIndex = itemDate.getDay();
+                // 요일별 색상 (일: 빨, 토: 파, 평일: 짙은 회색)
+                const dayTextColor = (dayIndex === 0 ? 'text-red-600' : (dayIndex === 6 ? 'text-blue-700' : 'text-gray-700'));
+
+                const card = document.createElement('div');
+                card.className = "p-4 bg-white rounded-xl shadow-xs flex justify-between items-center text-sm mb-2 border border-gray-100";
+                card.innerHTML = `
+                    <div class="flex-1 min-w-0 mr-2">
+                        <p class="font-bold text-gray-900 text-base truncate">${escapeHtml(item.name)}</p>
+                        ${getDestinationLine(item)}
+                        <p class="text-xs text-gray-500 mt-1 truncate">${(item.type === 'weekday' || item.type === 'weekend') ? '일시: '+item.start : '기간: '+item.start+' ~ '+item.end}</p>
+                    </div>
+                    <div class="flex items-center shrink-0 gap-2">
+                        <div class="w-7 h-7 flex items-center justify-center rounded-xl bg-gray-100 border border-gray-200 font-black text-sm ${dayTextColor}">
+                            ${days[dayIndex]}
+                        </div>
+                        <span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color: #ffffff !important;">
+                            ${typeNames[item.type]}
+                        </span>
+                    </div>`;
+                setupLongPress(card, item);
+                listWrapper.appendChild(card);
+            });
+        }
+
+        function renderNextWeeklyTab(dataFromFilter) {
+            const nextWeeklyRange = getNextWeeklyRange(); 
+            const nextWeeklyContainer = document.getElementById('view-next-weekly');
+            
+            nextWeeklyContainer.innerHTML = `
+                <h3 class="font-bold text-sm mb-3 px-2">다음 주 출타 현황</h3>
+                <div class="space-y-2"></div>
+            `;
+            const listWrapper = nextWeeklyContainer.querySelector('.space-y-2');
+
+            const typeBgClasses = { weekday:'color-weekday', weekend:'color-weekend', overnight:'color-overnight', vacation:'color-vacation' };
+            const typeNames = { weekday: '평일외출', weekend: '주말외출', overnight: '외박출발', vacation: '휴가출발' };
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+
+            const filteredData = (dataFromFilter || outData).filter(item => item.start >= nextWeeklyRange.start && item.start <= nextWeeklyRange.end);
+
+            filteredData.forEach(item => {
+                const itemDate = new Date(item.start);
+                const dayIndex = itemDate.getDay();
+                const dayTextColor = (dayIndex === 0 ? 'text-red-600' : (dayIndex === 6 ? 'text-blue-700' : 'text-gray-700'));
+
+                const card = document.createElement('div');
+                card.className = "p-4 bg-white rounded-xl shadow-xs flex justify-between items-center text-sm mb-2 border border-gray-100";
+                card.innerHTML = `
+                    <div class="flex-1 min-w-0 mr-2">
+                        <p class="font-bold text-gray-900 text-base truncate">${escapeHtml(item.name)}</p>
+                        ${getDestinationLine(item)}
+                        <p class="text-xs text-gray-500 mt-1 truncate">${(item.type === 'weekday' || item.type === 'weekend') ? '일시: '+item.start : '기간: '+item.start+' ~ '+item.end}</p>
+                    </div>
+                    <div class="flex items-center shrink-0 gap-2">
+                        <div class="w-7 h-7 flex items-center justify-center rounded-xl bg-gray-100 border border-gray-200 font-black text-sm ${dayTextColor}">
+                            ${days[dayIndex]}
+                        </div>
+                        <span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color: #ffffff !important;">
+                            ${typeNames[item.type]}
+                        </span>
+                    </div>`;
+                setupLongPress(card, item);
+                listWrapper.appendChild(card);
+            });
+        }
+
+        // 다음 주 날짜 범위를 계산하는 헬퍼 함수
+        function getNextWeeklyRange() {
+            const now = new Date();
+            const day = now.getDay();
+            const diffToNextMonday = (day === 0 ? 1 : 8 - day); // 다음주 월요일까지의 차이
+            
+            const start = new Date(now);
+            start.setDate(now.getDate() + diffToNextMonday);
+            
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+
+            return {
+                start: start.toISOString().split('T')[0],
+                end: end.toISOString().split('T')[0]
+            };
+        }
+
+        function renderListTab(dataFromFilter) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayStr = getTodayString(); // 'YYYY-MM-DD' 형식
+
+            // 오늘 이후에 종료되는 데이터 (과거 데이터 제외)
+            const baseData = (dataFromFilter || outData).filter(item => item.end >= todayStr);
+            
+            const todayContainer = document.getElementById('today-list');
+            const currentContainer = document.getElementById('current-list');
+            const integratedContainer = document.getElementById('integrated-list');
+            
+            todayContainer.innerHTML = '';
+            currentContainer.innerHTML = '';
+            integratedContainer.innerHTML = '';
+
+            const typeBgClasses = { weekday:'color-weekday', weekend:'color-weekend', overnight:'color-overnight', vacation:'color-vacation' };
+            const typeNames = { weekday:'평일외출', weekend:'주말외출', overnight:'외박', vacation:'휴가' };
+
+            let todayElementsCount = 0;
+            let currentElementsCount = 0;
+
+            // 1. 오늘의 출타 (노란색 섹션: 시작/복귀 인원)
+            baseData.forEach((item) => {
+                if (item.start === todayStr || item.end === todayStr) {
+                    todayElementsCount++;
+                    const card = document.createElement('div');
+                    card.className = "p-4 bg-amber-50 rounded-xl shadow-xs flex justify-between items-center text-sm mb-2 border border-amber-200";
+                    
+                    let statusLabel = '';
+                    if (item.type === 'vacation') {
+                        statusLabel = (item.start === todayStr) ? '휴가출발' : '휴가복귀';
+                    } else if (item.type === 'overnight') {
+                        statusLabel = (item.start === todayStr) ? '외박출발' : '외박복귀';
+                    } else if (item.type === 'weekday') {
+                        statusLabel = '평일외출';
+                    } else if (item.type === 'weekend') {
+                        statusLabel = '주말외출';
+                    }
+
+                    card.innerHTML = `
+                            <div>
+                                <p class="font-bold text-gray-900 text-base">${escapeHtml(item.name)}</p>
+                                ${getDestinationLine(item)}
+                                <p class="text-xs text-gray-500 mt-1">${(item.type === 'weekday' || item.type === 'weekend') ? '일시: '+item.start : '기간: '+item.start+' ~ '+item.end}</p>
+                            </div>
+                            <span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color: #ffffff !important;">
+                                ${statusLabel}
+                            </span>`;
+                    setupLongPress(card, item);
+                    todayContainer.appendChild(card);
+                }
+            });
+
+            // 2. 현재 진행 중인 출타 (파란색 섹션: 시작일 <= 오늘 && 종료일 >= 오늘)
+            // 문자열 비교를 사용하여 날짜 밀림 현상 방지
+            baseData.forEach((item) => {
+                if (item.start <= todayStr && item.end >= todayStr) {
+                    currentElementsCount++;
+                    const card = document.createElement('div');
+                    card.className = "p-4 bg-blue-50 rounded-xl shadow-xs flex justify-between items-center text-sm mb-2 border border-blue-200";
+                    card.innerHTML = `
+                            <div>
+                                <p class="font-bold text-gray-900 text-base">${escapeHtml(item.name)}</p>
+                                ${getDestinationLine(item)}
+                                <p class="text-xs text-gray-500 mt-1">기간: ${item.start} ~ ${item.end}</p>
+                            </div>
+                            <span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color: #ffffff !important;">
+                                ${typeNames[item.type]}
+                            </span>`;
+                    setupLongPress(card, item);
+                    currentContainer.appendChild(card);
+                }
+            });
+
+            // 3. 안내 메시지
+            if (todayElementsCount === 0) todayContainer.innerHTML = `<div class="text-center py-4 text-xs text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">오늘 변동되는 출타자가 없습니다.</div>`;
+            if (currentElementsCount === 0) currentContainer.innerHTML = `<div class="text-center py-4 text-xs text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">현재 부재 중인 인원이 없습니다.</div>`;
+
+            // 4. 통합 명단
+            if(baseData.length === 0) {
+                integratedContainer.innerHTML = `<div class="text-center py-12 text-sm text-gray-400">진행 중인 출타가 없습니다.</div>`;
+            } else {
+                [...baseData].sort((a,b) => a.start.localeCompare(b.start)).forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "p-4 bg-white rounded-xl shadow-xs flex justify-between items-center text-sm mb-2 border border-gray-100";
+                    card.innerHTML = `
+                            <div>
+                                <p class="font-bold text-gray-900 text-base">${escapeHtml(item.name)}</p>
+                                ${getDestinationLine(item)}
+                                <p class="text-xs text-gray-500 mt-1">${(item.type === 'weekday' || item.type === 'weekend') ? '일시: '+item.start : '기간: '+item.start+' ~ '+item.end}</p>
+                            </div>
+                            <span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color: #ffffff !important;">
+                                ${typeNames[item.type]}
+                            </span>`;
+                    setupLongPress(card, item);
+                    integratedContainer.appendChild(card);
+                });
+            }
+
+            const btn = document.createElement('button');
+            btn.innerText = '과거 출타 보기';
+            btn.className = 'w-full py-3 mt-4 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm';
+            btn.onclick = () => showPastOutingsModal();
+            integratedContainer.appendChild(btn);
+        }
+
+        function showPastOutingsModal() {
+            const modal = document.getElementById('past-outing-modal');
+            const container = document.getElementById('past-outing-list');
+            container.innerHTML = '';
+
+            const typeBgClasses = { weekday:'color-weekday', weekend:'color-weekend', overnight:'color-overnight', vacation:'color-vacation' };
+            const typeNames = { weekday:'평일외출', weekend:'주말외출', overnight:'외박', vacation:'휴가' };
+
+            // 팝업 내부 검색어 가져오기
+            const searchQuery = document.getElementById('modal-search-input').value.toLowerCase();
+            const todayStr = getTodayString();
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+            const oneMonthAgoStr = oneMonthAgo.toISOString().split('T')[0];
+
+            // 데이터 필터링 로직: 필터가 모두 꺼져있으면 전체 표시
+            const pastData = outData.filter(item => 
+                item.end >= oneMonthAgoStr && 
+                item.end < todayStr &&
+                (item.name || "").toLowerCase().includes(searchQuery) &&
+                (modalFilters.size === 0 || modalFilters.has(item.type))
+            );
+
+            if (pastData.length === 0) {
+                container.innerHTML = `<p class="text-center py-4 text-gray-400">지난 한 달간 종료된 출타 기록이 없습니다.</p>`;
+            } else {
+                pastData.forEach(item => {
+                    const displayPeriod = (item.type === 'weekday' || item.type === 'weekend') 
+                        ? `일시: ${item.start}` 
+                        : `기간: ${item.start} ~ ${item.end}`;
+
+                    const card = document.createElement('div');
+                    card.className = "p-3 bg-white rounded-xl text-sm border border-gray-100 mb-2 flex justify-between items-center";
+                    card.innerHTML = `
+                        <div>
+                            <p class="font-bold text-gray-700">${escapeHtml(item.name)}</p>
+                            ${getDestinationLine(item)}
+                            <p class="text-xs text-gray-500">${displayPeriod}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded-lg text-[10px] font-black text-white ${typeBgClasses[item.type]}" style="color: #ffffff !important;">
+                            ${typeNames[item.type]}
+                        </span>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+            modal.classList.remove('hidden');
+        }
+
+
+        function subscribeRealtime() {
+            sb
+                .channel("outing-channel")
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: "outing",
+                        filter: `unit_id=eq.${currentProfile.unit_id}`
+                    },
+                    async () => {
+                        await loadData();
+                        renderCalendar();
+                        renderListTab();
+                    }
+                )
+                .subscribe();
+        }
+    </script>
+
+    <script>
+
+    let deferredPrompt = null;
+    const installButton = document.getElementById("installButton");
+    function isStandalone() {
+        return window.matchMedia("(display-mode: standalone)").matches
+            || window.navigator.standalone === true;
+    }
+
+    function isIOS() {
+        return /iphone|ipad|ipod/i.test(navigator.userAgent);
+    }
+    window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (!isStandalone()) {
+            installButton.classList.remove("hidden");
+        }
+
+    });
+
+
+    installButton.addEventListener("click", async () => {
+
+        if (isIOS()) {
+
+            alert(
+    `아이폰에서는
+    Safari 하단의 공유, '홈 화면에 추가'
+    를 눌러 설치할 수 있습니다.`
+            );
+            return;
+        }
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+    });
+
+    window.addEventListener("appinstalled", () => {
+        installButton.classList.add("hidden");
+        console.log("앱 설치 완료");
+    });
+    // 처음 실행 시
+    window.addEventListener("load", () => {
+        if (isStandalone()) {
+            installButton.classList.add("hidden");
+        }
+    });
+
+    </script>
+
+    <script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", async () => {
+            const registration = await navigator.serviceWorker.register("./service-worker.js");
+            console.log("Service Worker 등록 완료");
+            registration.addEventListener("updatefound", () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener("statechange", () => {
+                    if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                        if (confirm("새 버전이 있습니다.\n지금 업데이트하시겠습니까?")) {
+                            window.location.reload();
+                        }
+                    }
+                });
+            });
+        });
+    }
+    </script>
+
+</body>
+</html>
