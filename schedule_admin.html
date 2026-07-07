@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>출타</title>
+    <title>관리자 출타</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color"
-          content="#10b981">
+          content="#F28C28">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
@@ -77,7 +77,7 @@
                 </div>
                 <h2 id="page-title" class="flex-1 text-center text-lg font-bold tracking-tight truncate">출타</h2>
                 <div class="w-24 flex justify-end">
-                    <button onclick="openModal()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded-xl text-xs active:scale-95 transition-all shadow-xs"> 출타 등록 </button>
+                    <button onclick="location.href='admin_Only.html'" class="px-3 py-1.5 bg-[#F28C28] text-white font-bold rounded-xl text-xs active:scale-95 transition-all shadow-xs">관리자 탭</button>
                 </div>
             </header>
 
@@ -85,7 +85,7 @@
                 <div class="max-w-md mx-auto">
                     <nav class="flex gap-2 w-full mb-3">
                         <div class="flex flex-1 gap-1">
-                            <button id="btn-tab-calendar" onclick="switchViewTab('calendar')" class="py-2 rounded-xl font-bold text-xs bg-blue-600 text-white shadow-xs flex-1">달력</button>
+                            <button id="btn-tab-calendar" onclick="switchViewTab('calendar')" class="py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1">달력</button>
                             <button id="btn-tab-list" onclick="switchViewTab('list')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">상세</button>
                         </div>
                         <div class="flex flex-1 gap-1">
@@ -254,30 +254,7 @@
             </div>
 
             <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">입대일</label>
-                    <input type="date" id="settings-enlist-date" onchange="saveProfileSettings()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">전역일</label>
-                    <input type="date" id="settings-discharge-date" onchange="saveProfileSettings()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">출타별 주 행선지</label>
-                    <div class="grid grid-cols-1 gap-2">
-                        <input type="text" id="settings-weekday-destination" oninput="handleSettingsInput()" placeholder="평일외출 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                        <input type="text" id="settings-weekend-destination" oninput="handleSettingsInput()" placeholder="주말외출 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                        <input type="text" id="settings-overnight-destination" oninput="handleSettingsInput()" placeholder="외박 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                        <input type="text" id="settings-vacation-destination" oninput="handleSettingsInput()" placeholder="휴가 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                    </div>
-                    <p class="text-[11px] text-gray-400 mt-1 text-center">출타 형태를 선택하면 해당 형태의 주 행선지가 먼저 입력됩니다.</p>
-                </div>
-
-                <p id="settings-save-status" class="text-xs text-emerald-600 min-h-[16px]"></p>
-
-                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+                <div class="grid grid-cols-1 gap-2 pt-1">
                     <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
                     <button onclick="handleDeleteAccount()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all">회원탈퇴</button>
                 </div>
@@ -301,6 +278,7 @@
 
 
         let outData = [];
+        let outingProfileMap = new Map();
         let currentUser = null;
         let currentProfile = null;
         let currentUnit = null;
@@ -358,7 +336,10 @@
         }
 
         function getDestinationLine(item){
-            return item.destination ? `<p class="text-xs text-gray-500 mt-1 truncate">행선지: ${escapeHtml(item.destination)}</p>` : "";
+            const profile = outingProfileMap.get(item.user_id) || {};
+            const phoneLine = profile.phone ? `<p class="text-xs text-gray-500 mt-1 truncate">연락처: ${escapeHtml(profile.phone)}</p>` : "";
+            const destinationLine = item.destination ? `<p class="text-xs text-gray-500 mt-1 truncate">행선지: ${escapeHtml(item.destination)}</p>` : "";
+            return phoneLine + destinationLine;
         }
 
         const now = new Date();
@@ -398,29 +379,50 @@
         }
 
         async function executeSoftDelete() {
+            if(!currentEditId || !currentProfile?.unit_id){
+                triggerToast('삭제할 출타를 찾을 수 없습니다.');
+                return;
+            }
+
             const { error } = await sb
                 .from("outing")
-                .update({
-                    start: '1900-01-01',
-                    end: '1900-01-01',
-                    type: 'weekday'
-                })
+                .delete()
                 .eq('id', currentEditId)
-                .eq('user_id', currentUser.id);
+                .eq('unit_id', currentProfile.unit_id);
 
             if (error) {
-                alert("삭제 실패: " + error.message);
+                triggerToast("삭제 실패\n" + error.message);
                 return;
             }
 
             hideConfirmModal();
-            closeModal();
+            currentEditId = null;
             triggerToast('삭제되었습니다.');
             await loadData();
-            renderListTab();
-            renderCalendar();
+            renderActiveView();
         }
 
+
+        async function loadOutingProfileMap(items){
+            outingProfileMap = new Map();
+            const ids = [...new Set((items || []).map(item => item.user_id).filter(Boolean))];
+            if(ids.length === 0) return;
+
+            const {data,error}=await sb
+                .from("profiles")
+                .select("id,phone,unit_id")
+                .in("id", ids)
+                .eq("unit_id", currentProfile.unit_id);
+
+            if(error){
+                console.error(error);
+                return;
+            }
+
+            (data || []).forEach(profile=>{
+                outingProfileMap.set(profile.id, profile);
+            });
+        }
 
         async function loadData(){
             await autoPurgeExpiredData();
@@ -441,6 +443,7 @@
                 return;
             }
             outData=data || [];
+            await loadOutingProfileMap(outData);
         }
 
         async function autoPurgeExpiredData() {
@@ -532,7 +535,7 @@
             
             // 3. 클릭된 탭 버튼 활성화 (flex-1 유지)
             const activeBtn = document.getElementById(`btn-tab-${viewType === 'next-weekly' ? 'next-weekly' : viewType}`);
-            activeBtn.className = 'py-2 rounded-xl font-bold text-xs bg-blue-600 text-white shadow-xs flex-1';
+            activeBtn.className = 'py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1';
 
             // 4. 모든 뷰 숨김 처리
             const views = ['view-calendar', 'view-list', 'view-weekly', 'view-next-weekly'];
@@ -581,15 +584,18 @@
 
         function filterData() {
             searchQuery = document.getElementById('search-input').value;
+            renderActiveView();
+        }
+
+        function renderActiveView(){
+            const activeView = document.querySelector('section:not(.hidden)')?.id || 'view-calendar';
             const filteredData = getFilteredData();
-            
-            // 현재 활성 탭에 맞춰 재렌더링
-            const activeView = document.querySelector('section:not(.hidden)').id;
             if (activeView === 'view-calendar') renderCalendar(filteredData);
             else if (activeView === 'view-list') renderListTab(filteredData);
             else if (activeView === 'view-weekly') renderWeeklyTab(filteredData);
             else if (activeView === 'view-next-weekly') renderNextWeeklyTab(filteredData);
         }
+
 
         let dateFilter = { start: null, end: null };
 
@@ -661,15 +667,6 @@
 
 
         function openSettingsModal(){
-            if(!currentProfile) return;
-
-            document.getElementById('settings-enlist-date').value = currentProfile.enlist_date || '';
-            document.getElementById('settings-discharge-date').value = currentProfile.discharge_date || '';
-            document.getElementById('settings-weekday-destination').value = currentProfile.weekday_destination || '';
-            document.getElementById('settings-weekend-destination').value = currentProfile.weekend_destination || '';
-            document.getElementById('settings-overnight-destination').value = currentProfile.overnight_destination || '';
-            document.getElementById('settings-vacation-destination').value = currentProfile.vacation_destination || '';
-            document.getElementById('settings-save-status').innerText = '';
             document.getElementById('settings-modal').classList.remove('hidden');
         }
 
@@ -693,7 +690,7 @@
                             <button id="confirm-toast-cancel" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">
                                 ${cancelText}
                             </button>
-                            <button id="confirm-toast-ok" class="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm">
+                            <button id="confirm-toast-ok" class="flex-1 py-2.5 bg-[#F28C28] text-white rounded-xl font-bold text-sm">
                                 ${confirmText}
                             </button>
                         </div>
@@ -733,7 +730,7 @@
 
         async function handleDeleteAccount(){
             const firstOk = await showConfirmToast(
-                "탈퇴 하시겠습니까?\n내 계정과 내 출타 기록이\n삭제됩니다.",
+                "탈퇴 하시겠습니까?\n내 계정이 삭제됩니다.",
                 "탈퇴",
                 "취소"
             );
@@ -812,15 +809,8 @@
             }, 1500);
         }
 
-        function openModal() { 
-            currentEditId = null;
-            clearForm();
-            document.getElementById('modal-title').innerText = '새 출타 등록';
-            document.getElementById('btn-delete').classList.add('hidden');
-            document.getElementById('register-modal').classList.remove('hidden');
-            document.getElementById('input-start-date').value = getTodayString();
-            syncDestinationBySelectedType(true);
-            setTimeout(()=>document.getElementById('input-destination').focus(), 50);
+        function openModal() {
+            location.href = 'admin_Only.html';
         }
 
         
@@ -931,7 +921,7 @@
         }
 
         async function initPage(){
-            const authInfo = await requireUser();
+            const authInfo = await requireAdmin();
             if(!authInfo) return;
 
             currentUser = authInfo.user;
@@ -1028,11 +1018,8 @@
             
             const start = () => {
                 pressTimer = setTimeout(() => {
-                    if(!canModify(item)){
-                        triggerToast('본인의 출타만\n수정 또는 삭제할 수 있습니다.');
-                        return;
-                    }
-                    openEditModal(item);
+                    currentEditId = item.id;
+                    showConfirmModal();
                 }, 600);
             };
             const clear = () => clearTimeout(pressTimer);
@@ -1531,8 +1518,7 @@
                     },
                     async () => {
                         await loadData();
-                        renderCalendar();
-                        renderListTab();
+                        renderActiveView();
                     }
                 )
                 .subscribe();

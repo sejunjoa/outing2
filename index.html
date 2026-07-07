@@ -50,14 +50,28 @@ let loggingIn=false;
 async function moveByRole(user){
     const {data:profile,error:profileError}=await getProfile(user.id);
 
-    if(profileError){
+    if(profileError || !profile){
         await logout();
         triggerToast("회원 정보를\n불러오지 못했습니다.");
         return;
     }
 
     if(profile.role==="user"){
-        location.replace("schedule_user.html");
+        if(profile.user_approved===true){
+            location.replace("schedule_user.html");
+            return;
+        }
+
+        if(profile.approval_status==="rejected"){
+            triggerToast("회원가입 신청이 반려되었습니다.\n부대 코드를 다시 입력해\n재신청해주세요.");
+            setTimeout(()=>{
+                location.replace("register_user.html?reapply=1");
+            },1200);
+            return;
+        }
+
+        await logout();
+        triggerToast("회원가입 승인 대기중입니다.\n부대 관리자의 승인을 기다려주세요.");
         return;
     }
 

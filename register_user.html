@@ -34,7 +34,8 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
 <body>
 
 <div class="register-box">
-    <div class="title">회원가입</div>
+    <div class="title" id="pageTitle">회원가입</div>
+    <div id="reapplyNotice" class="hidden mb-4 p-3 rounded-xl bg-blue-50 text-blue-700 text-sm font-bold text-center leading-relaxed">반려된 회원가입 신청을 다시 제출합니다.</div>
 
     <input type="email" id="email" class="input" placeholder="이메일">
 
@@ -90,6 +91,9 @@ const phoneRegex=/^01[0-9]{8,9}$/;
 
 let selectedUnitId=null;
 let registering=false;
+let reapplyMode=false;
+let sessionUser=null;
+let sessionProfile=null;
 
 function checkPassword(){
     if(passwordConfirm.value.length===0){
@@ -159,6 +163,70 @@ async function waitForProfile(userId){
     return false;
 }
 
+
+async function prepareReapplyMode(){
+    const urlParams=new URLSearchParams(location.search);
+    const {data:{session}}=await getSession();
+
+    if(!session || !urlParams.has("reapply")) return;
+
+    const {data:profile,error}=await getProfile(session.user.id);
+    if(error || !profile || profile.role!=="user" || profile.user_approved===true) return;
+
+    reapplyMode=true;
+    sessionUser=session.user;
+    sessionProfile=profile;
+
+    document.getElementById("pageTitle").innerText="회원가입 재신청";
+    document.getElementById("reapplyNotice").classList.remove("hidden");
+    registerBtn.innerText="회원가입 재신청";
+
+    email.value=session.user.email || "";
+    email.disabled=true;
+    email.classList.add("bg-gray-100","text-gray-400");
+
+    password.value="";
+    passwordConfirm.value="";
+    password.placeholder="재신청용 비밀번호";
+    passwordConfirm.placeholder="재신청용 비밀번호 확인";
+    pwCheckMsg.style.visibility="hidden";
+
+    nameInput.value=profile.name || session.user.user_metadata?.display_name || "";
+    phone.value=profile.phone || "";
+    enlistDate.value=profile.enlist_date || "";
+    dischargeDate.value=profile.discharge_date || "";
+
+    // 재신청에서는 이미 저장된 입대일/전역일을 유지하고, 입력칸은 숨깁니다.
+    enlistDate.style.display="none";
+    dischargeDate.style.display="none";
+}
+
+async function submitReapply(phoneNumber){
+    const {error}=await sb
+        .from("profiles")
+        .update({
+            name:nameInput.value.trim(),
+            unit_id:selectedUnitId,
+            phone:phoneNumber,
+            enlist_date:enlistDate.value,
+            discharge_date:dischargeDate.value,
+            user_approved:false,
+            approval_status:"pending"
+        })
+        .eq("id",sessionUser.id);
+
+    if(error){
+        triggerToast("재신청 실패\n"+error.message);
+        return;
+    }
+
+    triggerToast("회원가입 신청이 완료되었습니다.\n부대 관리자의 승인을 기다려주세요.");
+    await logout();
+    setTimeout(()=>{
+        location.replace("index.html");
+    },1500);
+}
+
 password.addEventListener("input",checkPassword);
 passwordConfirm.addEventListener("input",checkPassword);
 
@@ -217,28 +285,44 @@ registerBtn.addEventListener("click",async()=>{
         return;
     }
 
-if(enlistDate.value===""){
-    triggerToast("입대일을 입력하세요.");
-    enlistDate.focus();
-    return;
-}
+    if(!reapplyMode){
+        if(enlistDate.value===""){
+            triggerToast("입대일을 입력하세요.");
+            enlistDate.focus();
+            return;
+        }
 
-if(dischargeDate.value===""){
-    triggerToast("전역일을 입력하세요.");
-    dischargeDate.focus();
-    return;
-}
+        if(dischargeDate.value===""){
+            triggerToast("전역일을 입력하세요.");
+            dischargeDate.focus();
+            return;
+        }
 
-if(new Date(enlistDate.value) > new Date(dischargeDate.value)){
-    triggerToast("입대일은 전역일보다\n늦을 수 없습니다.");
-    enlistDate.focus();
-    return;
-}
+        if(new Date(enlistDate.value) > new Date(dischargeDate.value)){
+            triggerToast("입대일은 전역일보다\n늦을 수 없습니다.");
+            enlistDate.focus();
+            return;
+        }
+    }
 
     registering=true;
     registerBtn.disabled=true;
 
     try{
+        if(reapplyMode){
+            const {error:passwordUpdateError}=await sb.auth.updateUser({
+                password:password.value
+            });
+
+            if(passwordUpdateError){
+                triggerToast("비밀번호 저장 실패\n"+passwordUpdateError.message);
+                return;
+            }
+
+            await submitReapply(phoneNumber);
+            return;
+        }
+
         const {data,error}=await sb.auth.signUp({
             email:emailValue,
             password:password.value,
@@ -270,10 +354,13 @@ if(new Date(enlistDate.value) > new Date(dischargeDate.value)){
         const {error:updateError}=await sb
             .from("profiles")
             .update({
+                name:nameInput.value.trim(),
                 unit_id:selectedUnitId,
                 phone:phoneNumber,
                 enlist_date:enlistDate.value,
-                discharge_date:dischargeDate.value
+                discharge_date:dischargeDate.value,
+                user_approved:false,
+                approval_status:"pending"
             })
             .eq("id",data.user.id);
 
@@ -282,8 +369,9 @@ if(new Date(enlistDate.value) > new Date(dischargeDate.value)){
             return;
         }
 
-        triggerToast("회원가입이 완료되었습니다.\n로그인 페이지로 이동합니다.");
+        triggerToast("회원가입 신청이 완료되었습니다.\n부대 관리자의 승인을 기다려주세요.");
 
+        await logout();
         setTimeout(()=>{
             location.replace("index.html");
         },1500);
@@ -293,6 +381,7 @@ if(new Date(enlistDate.value) > new Date(dischargeDate.value)){
         registerBtn.disabled=false;
     }
 });
+window.addEventListener("load",prepareReapplyMode);
 </script>
 
 </body>

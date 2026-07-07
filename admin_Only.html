@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>관리자</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F28C28">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="toast.js"></script>
+<script src="auth.js"></script>
+<style>
+*{box-sizing:border-box;font-family:'Pretendard','Noto Sans KR',sans-serif;}
+.rate-cell{min-height:74px;border-top:1px solid #f1f5f9;position:relative;padding:4px;border-radius:8px;overflow:hidden;}
+.rate-value{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;}
+.tab-active{background:#F28C28;color:white;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.card{background:white;border:1px solid #f1f5f9;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.color-weekday { background-color:#3b82f6!important; }
+.color-weekend { background-color:#1e3a8a!important; }
+.color-overnight { background-color:#10b981!important; }
+.color-vacation { background-color:#ef4444!important; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased relative">
+
+<div id="page-status" class="max-w-md mx-auto min-h-screen flex flex-col">
+    <div class="sticky top-0 z-20 bg-gray-50 shadow-sm border-b border-gray-200">
+        <header class="bg-white px-4 py-3 flex items-center">
+            <div class="w-24 flex justify-start">
+                <button onclick="openSettingsModal()" class="h-[30px] px-3 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs flex items-center justify-center" aria-label="설정">설정 ⚙️</button>
+            </div>
+            <h2 id="page-title" class="flex-1 text-center text-lg font-bold tracking-tight truncate">관리자</h2>
+            <div class="w-24 flex justify-end">
+                <button onclick="location.href='schedule_admin.html'" class="px-3 py-1.5 bg-[#F28C28] text-white font-bold rounded-xl text-xs active:scale-95 transition-all shadow-xs">출타 탭</button>
+            </div>
+        </header>
+
+        <div class="bg-white p-3">
+            <div class="max-w-md mx-auto">
+                <nav class="flex gap-2 w-full mb-3">
+                    <div class="flex flex-1 gap-1">
+                        <button id="btn-tab-rate-calendar" onclick="switchAdminTab('rate-calendar')" class="py-2 rounded-xl font-bold text-xs tab-active flex-1">출타율 달력</button>
+                        <button id="btn-tab-rate-detail" onclick="switchAdminTab('rate-detail')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">출타율 상세</button>
+                    </div>
+                    <div class="flex flex-1 gap-1">
+                        <button id="btn-tab-members" onclick="switchAdminTab('members')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">부대원 관리</button>
+                        <button id="btn-tab-unit" onclick="switchAdminTab('unit')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">부대 수정</button>
+                    </div>
+                </nav>
+
+                <div id="rate-mode-filter" class="flex flex-wrap gap-x-2 gap-y-2 text-xs font-bold text-gray-500 px-1">
+                    <button id="btn-rate-all" onclick="setRateMode('all')" class="bg-[#F28C28] text-white px-3 py-1 rounded-lg border border-[#F28C28] transition-all">전체</button>
+                    <button id="btn-rate-vacation" onclick="setRateMode('vacation')" class="bg-orange-50 text-[#F28C28] px-3 py-1 rounded-lg border border-orange-200 transition-all">휴가만</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-md mx-auto w-full flex-1">
+        <div class="p-3">
+            <section id="view-rate-calendar">
+                <div class="flex justify-between items-center px-4 py-2">
+                    <button onclick="changeMonth(-1)" class="w-10 h-10 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 rounded-full transition-all">&lt;</button>
+                    <div id="calendar-title" class="font-bold text-lg"></div>
+                    <button onclick="changeMonth(1)" class="w-10 h-10 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 rounded-full transition-all">&gt;</button>
+                </div>
+                <div class="bg-white rounded-2xl p-3 shadow-xs border border-gray-200 overflow-hidden">
+                    <div id="rate-calendar-grid" class="grid grid-cols-7 gap-y-2 text-sm"></div>
+                </div>
+                <p class="text-[11px] text-gray-400 text-center mt-3">숫자는 해당일 출타율(%)입니다.</p>
+            </section>
+
+            <section id="view-rate-detail" class="hidden">
+                <div class="flex justify-between items-center px-4 py-2">
+                    <button onclick="changeDetailMonth(-1)" class="w-10 h-10 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 rounded-full transition-all">&lt;</button>
+                    <div id="detail-title" class="font-bold text-lg"></div>
+                    <button onclick="changeDetailMonth(1)" class="w-10 h-10 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 rounded-full transition-all">&gt;</button>
+                </div>
+                <div id="rate-detail-list" class="space-y-2"></div>
+            </section>
+
+            <section id="view-members" class="hidden space-y-6">
+                <div>
+                    <h3 class="font-extrabold text-[#F28C28] text-sm mb-2">&lt;가입 희망자&gt;</h3>
+                    <div id="pending-list" class="space-y-2"></div>
+                </div>
+                <div>
+                    <h3 class="font-extrabold text-gray-700 text-sm mb-2">&lt;관리자&gt;</h3>
+                    <div id="admin-list" class="space-y-2"></div>
+                </div>
+                <div>
+                    <h3 class="font-extrabold text-gray-700 text-sm mb-2">&lt;부대원&gt;</h3>
+                    <div id="member-list" class="space-y-2"></div>
+                </div>
+            </section>
+
+            <section id="view-unit" class="hidden space-y-5">
+                <div id="current-unit-info" class="card p-4 text-sm text-gray-600"></div>
+
+                <div class="card p-4">
+                    <h3 class="font-bold text-sm mb-2 text-[#F28C28]">부대 가입하기</h3>
+                    <p class="text-xs text-gray-500 leading-relaxed mb-3">이미 생성된 부대가 있다면 부대명 또는 부대코드로 검색한 뒤 가입할 수 있습니다.</p>
+                    <input id="join-unit-search" oninput="handleJoinUnitSearchInput()" type="text" placeholder="부대명 또는 부대코드 검색" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-[#F28C28]">
+                    <div id="join-unit-result" class="mt-3 space-y-2"></div>
+                </div>
+
+                <div class="card p-4">
+                    <button onclick="toggleCreateUnitBox()" class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-orange-50 active:scale-95 transition-all">
+                        <span class="w-8 h-8 rounded-full bg-[#F28C28] text-white flex items-center justify-center text-2xl font-black leading-none">+</span>
+                        <span class="font-black text-[#F28C28]">부대 생성하기</span>
+                    </button>
+                    <div id="create-unit-box" class="hidden mt-4 space-y-2">
+                        <input id="new-unit-name" oninput="checkUnitNameExists()" type="text" placeholder="생성할 부대명" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-[#F28C28]">
+                        <p id="unit-exists-msg" class="text-xs min-h-[16px]"></p>
+                        <button onclick="createUnit()" class="w-full py-2.5 bg-[#F28C28] text-white rounded-xl font-bold text-sm">부대 생성</button>
+                    </div>
+                </div>
+
+                <div class="card p-4">
+                    <h3 class="font-bold text-sm mb-3">부대명 수정</h3>
+                    <input id="edit-unit-name" type="text" placeholder="현재 소속 부대가 없습니다." class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-[#F28C28]">
+                    <button onclick="updateUnitName()" class="w-full mt-3 py-2.5 bg-[#F28C28] text-white rounded-xl font-bold text-sm">부대명 저장</button>
+                </div>
+
+                <div class="card p-4">
+                    <h3 class="font-bold text-sm mb-2 text-red-600">부대 삭제 신청</h3>
+                    <p class="text-xs text-gray-500 leading-relaxed mb-3">삭제 신청 후 개발자가 확인하여 직접 삭제하기 전까지 실제 삭제는 진행되지 않습니다.</p>
+                    <button onclick="requestUnitDelete()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm">삭제 신청</button>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+<div id="outing-popup" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl">
+        <h3 id="outing-popup-title" class="text-lg font-bold text-center mb-4"></h3>
+        <div id="outing-popup-list" class="max-h-80 overflow-y-auto space-y-2"></div>
+        <button onclick="closeOutingPopup()" class="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+    </div>
+</div>
+
+<div id="unit-created-popup" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white rounded-2xl w-full max-w-xs p-6 shadow-xl text-center">
+        <h3 class="text-lg font-bold mb-3">부대가 생성되었습니다!</h3>
+        <p id="created-unit-code" class="text-[#F28C28] font-black text-xl mb-5"></p>
+        <button onclick="closeUnitCreatedPopup()" class="w-full py-3 bg-[#F28C28] text-white rounded-xl font-bold text-sm">확인</button>
+    </div>
+</div>
+
+<div id="settings-modal" class="fixed inset-0 hidden flex items-center justify-center z-[9999] bg-black/50 p-4">
+    <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm">
+        <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+            <h3 class="text-lg font-bold text-gray-900">설정</h3>
+            <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+        </div>
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-2 pt-1">
+                <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
+                <button onclick="handleDeleteAccount()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all">회원탈퇴</button>
+            </div>
+            <div class="pt-3 border-t border-gray-100 text-center text-[11px] text-gray-400 leading-relaxed">개발자 문의 : 010-9541-7788 김세준</div>
+        </div>
+        <button onclick="closeSettingsModal()" class="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+    </div>
+</div>
+
+<script>
+let currentUser=null;
+let currentProfile=null;
+let currentUnit=null;
+let outData=[];
+let profiles=[];
+let joinUnitSearchTimer=null;
+let rateMode='all';
+const now=new Date();
+let currentYear=now.getFullYear();
+let currentMonth=now.getMonth();
+let detailYear=now.getFullYear();
+let detailMonth=now.getMonth();
+
+function escapeHtml(value){
+    return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+}
+function toDateStr(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function getTodayString(){return toDateStr(new Date());}
+function getApprovedUsers(){return profiles.filter(p=>p.role==='user' && p.user_approved===true);}
+function getMemberCount(){return getApprovedUsers().length;}
+function getUserName(userId){return profiles.find(p=>p.id===userId)?.name || outData.find(o=>o.user_id===userId)?.name || ''}
+function getUserPhone(userId){return profiles.find(p=>p.id===userId)?.phone || ''}
+function getDayOutings(dateStr, mode='all'){
+    const approvedIds=new Set(getApprovedUsers().map(p=>p.id));
+    return outData.filter(item=>approvedIds.has(item.user_id) && item.start<=dateStr && item.end>=dateStr && (mode==='all' || item.type==='vacation'));
+}
+function getRate(dateStr, mode=rateMode){
+    const total=getMemberCount();
+    if(total===0) return 0;
+    const ids=new Set(getDayOutings(dateStr, mode).map(item=>item.user_id));
+    return Math.round((ids.size/total)*100);
+}
+function getRateStyle(percent, mode=rateMode){
+    const max=mode==='vacation'?15:30;
+    const t=Math.max(0, Math.min(percent, max))/max;
+    const r=255;
+    const g=Math.round(255 - (255-140)*t);
+    const b=Math.round(255 - (255-40)*t);
+    const textColor=t>=0.55?'#ffffff':'#F28C28';
+    return {background:`rgb(${r},${g},${b})`, color:textColor};
+}
+
+async function loadUnit(){
+    if(!currentProfile?.unit_id){currentUnit=null;return;}
+    const {data,error}=await sb.from('units').select('id,unit_name,unit_code').eq('id',currentProfile.unit_id).maybeSingle();
+    if(error){console.error(error);triggerToast('부대 정보를 불러오지 못했습니다.');return;}
+    currentUnit=data;
+}
+async function loadData(){
+    if(!currentProfile?.unit_id){outData=[];profiles=[];return;}
+    const [{data:outingData,error:outingError},{data:profileData,error:profileError}]=await Promise.all([
+        sb.from('outing').select('*').eq('unit_id',currentProfile.unit_id).order('start'),
+        sb.from('profiles').select('id,name,phone,role,unit_id,user_approved,approval_status').eq('unit_id',currentProfile.unit_id).order('name')
+    ]);
+    if(outingError){console.error(outingError);triggerToast('출타 정보를 불러오지 못했습니다.');}
+    if(profileError){console.error(profileError);triggerToast('부대원 정보를 불러오지 못했습니다.');}
+    outData=outingData||[];
+    profiles=profileData||[];
+}
+
+function updateTitle(){
+    const title=currentUnit?.unit_name ? `${currentUnit.unit_name} 관리자` : '관리자';
+    document.title=title;
+    document.getElementById('page-title').innerText=title;
+    document.getElementById('edit-unit-name').value=currentUnit?.unit_name || '';
+}
+function switchAdminTab(type){
+    ['rate-calendar','rate-detail','members','unit'].forEach(tab=>{
+        const btn=document.getElementById(`btn-tab-${tab}`);
+        btn.className='py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1';
+        document.getElementById(`view-${tab}`).classList.add('hidden');
+    });
+    document.getElementById(`btn-tab-${type}`).className='py-2 rounded-xl font-bold text-xs tab-active flex-1';
+    document.getElementById(`view-${type}`).classList.remove('hidden');
+    document.getElementById('rate-mode-filter').classList.toggle('hidden', type!=='rate-calendar');
+    if(type==='rate-calendar') renderRateCalendar();
+    if(type==='rate-detail') renderRateDetail();
+    if(type==='members') renderMembers();
+    if(type==='unit') renderUnitTab();
+}
+function setRateMode(mode){
+    rateMode=mode;
+    const all=document.getElementById('btn-rate-all');
+    const vac=document.getElementById('btn-rate-vacation');
+    all.className = mode==='all' ? 'bg-[#F28C28] text-white px-3 py-1 rounded-lg border border-[#F28C28] transition-all' : 'bg-orange-50 text-[#F28C28] px-3 py-1 rounded-lg border border-orange-200 transition-all';
+    vac.className = mode==='vacation' ? 'bg-[#F28C28] text-white px-3 py-1 rounded-lg border border-[#F28C28] transition-all' : 'bg-orange-50 text-[#F28C28] px-3 py-1 rounded-lg border border-orange-200 transition-all';
+    renderRateCalendar();
+}
+function changeMonth(offset){
+    currentMonth+=offset;
+    if(currentMonth>11){currentMonth=0;currentYear++;}
+    if(currentMonth<0){currentMonth=11;currentYear--;}
+    renderRateCalendar();
+}
+function renderRateCalendar(){
+    const grid=document.getElementById('rate-calendar-grid');
+    const title=document.getElementById('calendar-title');
+    grid.innerHTML='';
+    title.innerText=`${currentYear}년 ${String(currentMonth+1).padStart(2,'0')}월`;
+    ['월','화','수','목','금','토','일'].forEach((day,i)=>{
+        const div=document.createElement('div');
+        div.className='text-center text-xs font-bold mb-2 '+(i===5?'text-blue-600':i===6?'text-red-500':'text-gray-400');
+        div.innerText=day;
+        grid.appendChild(div);
+    });
+    const firstDay=new Date(currentYear,currentMonth,1).getDay();
+    const adjustedFirstDay=firstDay===0?6:firstDay-1;
+    const lastDate=new Date(currentYear,currentMonth+1,0).getDate();
+    const prevLastDate=new Date(currentYear,currentMonth,0).getDate();
+    for(let i=adjustedFirstDay;i>0;i--){
+        const dayDiv=document.createElement('div');
+        dayDiv.className='rate-cell text-gray-300 bg-white';
+        dayDiv.innerHTML=`<span class="text-xs font-semibold">${prevLastDate-i+1}</span>`;
+        grid.appendChild(dayDiv);
+    }
+    for(let date=1;date<=lastDate;date++){
+        const dateStr=`${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+        const percent=getRate(dateStr, rateMode);
+        const style=getRateStyle(percent, rateMode);
+        const dow=new Date(currentYear,currentMonth,date).getDay();
+        const dayDiv=document.createElement('div');
+        dayDiv.className='rate-cell';
+        dayDiv.style.background=style.background;
+        dayDiv.innerHTML=`
+            <span class="text-xs font-semibold ${dow===0?'text-red-500':dow===6?'text-blue-600':'text-gray-500'}">${date}</span>
+            <span class="rate-value" style="color:${style.color}">${percent}</span>
+        `;
+        grid.appendChild(dayDiv);
+    }
+}
+
+function changeDetailMonth(offset){
+    detailMonth+=offset;
+    if(detailMonth>11){detailMonth=0;detailYear++;}
+    if(detailMonth<0){detailMonth=11;detailYear--;}
+    renderRateDetail();
+}
+function renderRateDetail(){
+    const list=document.getElementById('rate-detail-list');
+    document.getElementById('detail-title').innerText=`${detailYear}년 ${String(detailMonth+1).padStart(2,'0')}월`;
+    list.innerHTML='';
+    const days=['일','월','화','수','목','금','토'];
+    const lastDate=new Date(detailYear,detailMonth+1,0).getDate();
+    for(let date=1;date<=lastDate;date++){
+        const d=new Date(detailYear,detailMonth,date);
+        const dateStr=toDateStr(d);
+        const allRate=getRate(dateStr,'all');
+        const vacationRate=getRate(dateStr,'vacation');
+        const mmdd=`${detailMonth+1}/${date}(${days[d.getDay()]})`;
+        const card=document.createElement('div');
+        card.className='card p-4 flex items-center gap-3';
+        card.innerHTML=`
+            <div class="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center font-black text-gray-700 shrink-0">${mmdd}</div>
+            <div class="flex-1 min-w-0 flex items-end gap-2">
+                <div class="text-3xl font-black text-[#F28C28] leading-none">${allRate}</div>
+                <div class="text-lg font-black text-gray-900 leading-none mb-0.5">${vacationRate}</div>
+            </div>
+            <div class="shrink-0 flex flex-col gap-1.5">
+                <button onclick="showOutingPopup('${dateStr}','vacation')" class="px-3 py-1.5 bg-orange-50 text-[#F28C28] rounded-lg text-xs font-black border border-orange-100">휴가자</button>
+                <button onclick="showOutingPopup('${dateStr}','non-vacation')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-black border border-gray-200">휴가 외<br>출타자</button>
+            </div>`;
+        list.appendChild(card);
+    }
+}
+function createOutingCard(item){
+    const typeNames={weekday:'평일외출',weekend:'주말외출',overnight:'외박',vacation:'휴가'};
+    const typeBgClasses={weekday:'color-weekday',weekend:'color-weekend',overnight:'color-overnight',vacation:'color-vacation'};
+    const period=(item.type==='weekday'||item.type==='weekend')?`일시: ${item.start}`:`기간: ${item.start} ~ ${item.end}`;
+    const div=document.createElement('div');
+    div.className='p-3 bg-white rounded-xl text-sm border border-gray-100 flex justify-between items-center';
+    div.innerHTML=`
+        <div class="min-w-0 mr-2">
+            <p class="font-bold text-gray-900 text-base truncate">${escapeHtml(item.name || getUserName(item.user_id))}</p>
+            ${getUserPhone(item.user_id)?`<p class="text-xs text-gray-500 mt-1 truncate">연락처: ${escapeHtml(getUserPhone(item.user_id))}</p>`:''}
+            ${item.destination?`<p class="text-xs text-gray-500 mt-1 truncate">행선지: ${escapeHtml(item.destination)}</p>`:''}
+            <p class="text-xs text-gray-500 mt-1 truncate">${period}</p>
+        </div>
+        <span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color:#fff!important;">${typeNames[item.type]}</span>`;
+    return div;
+}
+function showOutingPopup(dateStr, group){
+    const title=document.getElementById('outing-popup-title');
+    const list=document.getElementById('outing-popup-list');
+    const isVacation=group==='vacation';
+    const items=getDayOutings(dateStr,'all')
+        .filter(item=>isVacation?item.type==='vacation':item.type!=='vacation')
+        .sort((a,b)=>a.start.localeCompare(b.start));
+    title.innerText=`${dateStr} ${isVacation?'휴가자':'휴가 외 출타자'}`;
+    list.innerHTML='';
+    if(items.length===0){list.innerHTML='<p class="text-center py-8 text-sm text-gray-400">해당 인원이 없습니다.</p>';}
+    items.forEach(item=>list.appendChild(createOutingCard(item)));
+    document.getElementById('outing-popup').classList.remove('hidden');
+}
+function closeOutingPopup(){document.getElementById('outing-popup').classList.add('hidden');}
+
+function createMemberCard(profile, extra=''){
+    return `<div class="card p-4 flex justify-between items-center text-sm">
+        <div class="min-w-0 mr-2">
+            <p class="font-bold text-gray-900 text-base truncate">${escapeHtml(profile.name || '이름 없음')}</p>
+            <p class="text-xs text-gray-500 mt-1 truncate">연락처: ${escapeHtml(profile.phone || '미입력')}</p>
+        </div>${extra}</div>`;
+}
+function renderMembers(){
+    const pending=profiles.filter(p=>p.role==='user' && p.user_approved!==true && (p.approval_status||'pending')==='pending');
+    const admins=profiles.filter(p=>p.role==='admin');
+    const members=profiles.filter(p=>p.role==='user' && p.user_approved===true);
+    document.getElementById('pending-list').innerHTML=pending.length?pending.map(p=>createMemberCard(p,`
+        <div class="flex gap-1 shrink-0">
+            <button onclick="approveUser('${p.id}')" class="px-3 py-1.5 bg-[#F28C28] text-white rounded-lg text-xs font-black">승인</button>
+            <button onclick="rejectUser('${p.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black">반려</button>
+        </div>`)).join(''):'<div class="text-center py-8 text-sm text-gray-400 bg-white rounded-xl border border-gray-100">가입 희망자가 없습니다.</div>';
+    document.getElementById('admin-list').innerHTML=admins.length?admins.map(p=>createMemberCard(p)).join(''):'<div class="text-center py-8 text-sm text-gray-400 bg-white rounded-xl border border-gray-100">관리자가 없습니다.</div>';
+    document.getElementById('member-list').innerHTML=members.length?members.map(p=>createMemberCard(p)).join(''):'<div class="text-center py-8 text-sm text-gray-400 bg-white rounded-xl border border-gray-100">부대원이 없습니다.</div>';
+}
+async function approveUser(userId){
+    const {error}=await sb.from('profiles').update({user_approved:true, approval_status:'approved'}).eq('id',userId).eq('unit_id',currentProfile.unit_id).eq('role','user');
+    if(error){triggerToast('승인 실패\n'+error.message);return;}
+    triggerToast('승인되었습니다.');
+    await loadData(); renderMembers();
+}
+async function rejectUser(userId){
+    const ok=await showConfirmToast('회원가입 신청을 반려하시겠습니까?','반려','취소');
+    if(!ok) return;
+
+    const {error}=await sb.from('profiles')
+        .update({unit_id:null, user_approved:false, approval_status:'rejected'})
+        .eq('id',userId)
+        .eq('unit_id',currentProfile.unit_id)
+        .eq('role','user');
+
+    if(error){triggerToast('반려 실패\n'+error.message);return;}
+
+    profiles = profiles.filter(profile => profile.id !== userId);
+    renderMembers();
+    triggerToast('반려되었습니다.');
+
+    await loadData();
+    renderMembers();
+}
+
+
+function handleJoinUnitSearchInput(){
+    clearTimeout(joinUnitSearchTimer);
+    joinUnitSearchTimer=setTimeout(searchJoinUnits, 250);
+}
+
+function renderJoinUnitResults(items){
+    const box=document.getElementById('join-unit-result');
+    if(!box) return;
+
+    if(!items || items.length===0){
+        box.innerHTML='<div class="text-center py-4 text-xs text-gray-400 bg-gray-50 rounded-xl border border-gray-100">검색 결과가 없습니다.</div>';
+        return;
+    }
+
+    box.innerHTML=items.map(unit=>{
+        const isCurrent=currentProfile?.unit_id===unit.id;
+        return `<div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center gap-2">
+            <div class="min-w-0">
+                <p class="font-bold text-sm text-gray-900 truncate">${escapeHtml(unit.unit_name)}</p>
+                <p class="text-xs text-gray-500 mt-0.5">부대코드: ${escapeHtml(unit.unit_code || '')}</p>
+            </div>
+            <button onclick="joinUnit('${unit.id}')" ${isCurrent?'disabled':''} class="px-3 py-1.5 rounded-lg text-xs font-black shrink-0 ${isCurrent?'bg-gray-200 text-gray-500':'bg-[#F28C28] text-white'}">
+                ${isCurrent?'소속 중':'가입'}
+            </button>
+        </div>`;
+    }).join('');
+}
+
+async function searchJoinUnits(){
+    const input=document.getElementById('join-unit-search');
+    const box=document.getElementById('join-unit-result');
+    if(!input || !box) return;
+
+    const keyword=input.value.trim();
+    if(keyword.length<1){
+        box.innerHTML='<div class="text-center py-4 text-xs text-gray-400 bg-gray-50 rounded-xl border border-gray-100">부대명 또는 부대코드를 입력하세요.</div>';
+        return;
+    }
+
+    box.innerHTML='<div class="text-center py-4 text-xs text-gray-400">검색 중...</div>';
+
+    const safeKeyword=keyword.replaceAll('%','').replaceAll(',','');
+    const {data,error}=await sb
+        .from('units')
+        .select('id,unit_name,unit_code')
+        .or(`unit_name.ilike.*${safeKeyword}*,unit_code.ilike.*${safeKeyword}*`)
+        .order('unit_name')
+        .limit(20);
+
+    if(error){
+        console.error(error);
+        box.innerHTML='<div class="text-center py-4 text-xs text-red-500 bg-red-50 rounded-xl border border-red-100">부대 검색 실패</div>';
+        return;
+    }
+
+    renderJoinUnitResults(data || []);
+}
+
+async function joinUnit(unitId){
+    if(!unitId || !currentUser) return;
+
+    const ok=await showConfirmToast('선택한 부대로 가입하시겠습니까?','가입','취소');
+    if(!ok) return;
+
+    const {data:unitData,error:unitError}=await sb
+        .from('units')
+        .select('id,unit_name,unit_code')
+        .eq('id', unitId)
+        .maybeSingle();
+
+    if(unitError || !unitData){
+        triggerToast('부대 정보를 불러오지 못했습니다.');
+        return;
+    }
+
+    const {error:updateError}=await sb
+        .from('profiles')
+        .update({unit_id:unitData.id})
+        .eq('id', currentUser.id);
+
+    if(updateError){
+        triggerToast('부대 가입 실패\n' + updateError.message);
+        return;
+    }
+
+    currentProfile={...currentProfile, unit_id:unitData.id};
+    currentUnit=unitData;
+
+    triggerToast('부대 가입이 완료되었습니다.');
+    await loadData();
+    updateTitle();
+    renderUnitTab();
+    renderCurrentTab();
+    subscribeRealtime();
+}
+
+function toggleCreateUnitBox(){document.getElementById('create-unit-box').classList.toggle('hidden');}
+async function checkUnitNameExists(){
+    const name=document.getElementById('new-unit-name').value.trim();
+    const msg=document.getElementById('unit-exists-msg');
+    if(!name){msg.innerText='';return false;}
+    const {data,error}=await sb.from('units').select('id,unit_name').ilike('unit_name',name).limit(1);
+    if(error){console.error(error);msg.className='text-xs min-h-[16px] text-red-500';msg.innerText='부대명 확인 실패';return false;}
+    if((data||[]).length>0){msg.className='text-xs min-h-[16px] text-red-500';msg.innerText='해당 부대는 이미 존재합니다!';return true;}
+    msg.className='text-xs min-h-[16px] text-[#F28C28]';msg.innerText='사용 가능한 부대명입니다.';return false;
+}
+async function makeUniqueUnitCode(){
+    for(let i=0;i<20;i++){
+        const code=String(Math.floor(Math.random()*100000)).padStart(5,'0');
+        const {data,error}=await sb.from('units').select('id').eq('unit_code',code).limit(1);
+        if(!error && (!data || data.length===0)) return code;
+    }
+    return String(Date.now()).slice(-5);
+}
+async function createUnit(){
+    const name=document.getElementById('new-unit-name').value.trim();
+    if(!name){triggerToast('부대명을 입력하세요.');return;}
+    if(await checkUnitNameExists()) return;
+    const unitCode=await makeUniqueUnitCode();
+    const {data,error}=await sb.from('units').insert([{unit_name:name, unit_code:unitCode}]).select('id,unit_name,unit_code').single();
+    if(error){triggerToast('부대 생성 실패\n'+error.message);return;}
+    const {error:updateError}=await sb.from('profiles').update({unit_id:data.id}).eq('id',currentUser.id);
+    if(updateError){triggerToast('부대 소속 설정 실패\n'+updateError.message);return;}
+    currentProfile={...currentProfile, unit_id:data.id};
+    currentUnit=data;
+    document.getElementById('created-unit-code').innerText=`부대코드: ${data.unit_code}`;
+    document.getElementById('unit-created-popup').classList.remove('hidden');
+    await loadData(); updateTitle(); renderUnitTab();
+}
+function closeUnitCreatedPopup(){document.getElementById('unit-created-popup').classList.add('hidden');}
+function renderUnitTab(){
+    const info=document.getElementById('current-unit-info');
+    if(info){
+        if(currentUnit?.id){
+            info.innerHTML=`<p class="text-xs text-gray-500 mb-1">현재 소속 부대</p><p class="text-base font-black text-gray-900">${escapeHtml(currentUnit.unit_name)}</p><p class="text-xs text-[#F28C28] font-bold mt-1">부대코드: ${escapeHtml(currentUnit.unit_code || '')}</p>`;
+        }else{
+            info.innerHTML='<p class="text-sm font-bold text-gray-700">현재 소속 부대가 없습니다.</p><p class="text-xs text-gray-500 mt-1">부대 검색으로 기존 부대에 가입하거나 새 부대를 생성하세요.</p>';
+        }
+    }
+    document.getElementById('edit-unit-name').value=currentUnit?.unit_name || '';
+    const joinResult=document.getElementById('join-unit-result');
+    if(joinResult && joinResult.innerHTML.trim()===''){
+        joinResult.innerHTML='<div class="text-center py-4 text-xs text-gray-400 bg-gray-50 rounded-xl border border-gray-100">부대명 또는 부대코드를 입력하세요.</div>';
+    }
+}
+async function updateUnitName(){
+    if(!currentUnit?.id){triggerToast('수정할 소속 부대가 없습니다.');return;}
+    const name=document.getElementById('edit-unit-name').value.trim();
+    if(!name){triggerToast('부대명을 입력하세요.');return;}
+    const {error}=await sb.from('units').update({unit_name:name}).eq('id',currentUnit.id);
+    if(error){triggerToast('부대명 수정 실패\n'+error.message);return;}
+    currentUnit={...currentUnit, unit_name:name};
+    updateTitle();
+    triggerToast('부대명이 수정되었습니다.');
+}
+async function requestUnitDelete(){
+    if(!currentUnit?.id){triggerToast('삭제 신청할 소속 부대가 없습니다.');return;}
+    const ok=await showConfirmToast('부대 삭제를 신청하시겠습니까?','신청','취소');
+    if(!ok) return;
+    const {error}=await sb.from('unit_delete').upsert({unit_id:currentUnit.id, unit_name:currentUnit.unit_name, requested_by:currentUser.id, status:'pending'}, {onConflict:'unit_id'});
+    if(error){triggerToast('삭제 신청 실패\n'+error.message);return;}
+    triggerToast('부대 삭제 신청이 접수되었습니다.');
+}
+
+function openSettingsModal(){document.getElementById('settings-modal').classList.remove('hidden');}
+function closeSettingsModal(){document.getElementById('settings-modal').classList.add('hidden');}
+function showConfirmToast(message, confirmText='확인', cancelText='취소'){
+    return new Promise(resolve=>{
+        const existing=document.getElementById('custom-confirm-toast'); if(existing) existing.remove();
+        const toast=document.createElement('div');
+        toast.id='custom-confirm-toast';
+        toast.className='fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 p-6';
+        toast.innerHTML=`<div class="bg-white rounded-2xl p-6 text-center shadow-2xl max-w-xs w-full"><p class="font-bold text-lg whitespace-pre-line mb-5">${escapeHtml(message)}</p><div class="flex gap-2"><button id="confirm-toast-cancel" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">${escapeHtml(cancelText)}</button><button id="confirm-toast-ok" class="flex-1 py-2.5 bg-[#F28C28] text-white rounded-xl font-bold text-sm">${escapeHtml(confirmText)}</button></div></div>`;
+        document.body.appendChild(toast);
+        document.getElementById('confirm-toast-cancel').onclick=()=>{toast.remove();resolve(false);};
+        document.getElementById('confirm-toast-ok').onclick=()=>{toast.remove();resolve(true);};
+    });
+}
+async function handleLogout(){
+    const ok=await showConfirmToast('로그아웃 하시겠습니까?','로그아웃','취소');
+    if(!ok) return;
+    const {error}=await logout();
+    if(error){triggerToast('로그아웃 실패\n'+error.message);return;}
+    location.replace('index.html');
+}
+async function handleDeleteAccount(){
+    const firstOk=await showConfirmToast('탈퇴 하시겠습니까?\n계정이 삭제됩니다.','탈퇴','취소');
+    if(!firstOk) return;
+    const secondOk=await showConfirmToast('정말 탈퇴하시겠습니까?\n이 작업은 되돌릴 수 없습니다.','탈퇴','취소');
+    if(!secondOk) return;
+    const {error}=await sb.rpc('delete_my_account');
+    if(error){triggerToast('회원탈퇴 실패\n'+error.message);return;}
+    await logout();
+    triggerToast('회원탈퇴가 완료되었습니다.');
+    setTimeout(()=>location.replace('index.html'),1200);
+}
+
+function subscribeRealtime(){
+    if(!currentProfile?.unit_id) return;
+    sb.channel('admin-only-realtime')
+      .on('postgres_changes',{event:'*',schema:'public',table:'outing',filter:`unit_id=eq.${currentProfile.unit_id}`},async()=>{await loadData(); renderCurrentTab();})
+      .on('postgres_changes',{event:'*',schema:'public',table:'profiles'},async()=>{await loadData(); renderCurrentTab();})
+      .subscribe();
+}
+function renderCurrentTab(){
+    const active=document.querySelector('section:not(.hidden)')?.id || 'view-rate-calendar';
+    if(active==='view-rate-calendar') renderRateCalendar();
+    else if(active==='view-rate-detail') renderRateDetail();
+    else if(active==='view-members') renderMembers();
+    else if(active==='view-unit') renderUnitTab();
+}
+async function initPage(){
+    const authInfo=await requireAdmin();
+    if(!authInfo) return;
+    currentUser=authInfo.user;
+    currentProfile=authInfo.profile;
+    await loadUnit();
+    updateTitle();
+    await loadData();
+    renderRateCalendar();
+    subscribeRealtime();
+}
+window.onload=initPage;
+</script>
+</body>
+</html>
