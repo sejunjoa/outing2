@@ -26,6 +26,7 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
 .back a:hover{text-decoration:underline;}
 .message{height:18px;margin-top:-10px;margin-bottom:12px;font-size:12px;line-height:18px;}
 .guide{color:#2B7CFF;}
+.date-guide{margin-top:-10px;margin-bottom:12px;color:#2B7CFF;font-size:12px;line-height:16px;}
 .error{color:#E53935;visibility:hidden;}
 @media(max-width:420px){.register-box{padding:30px 20px;}.title{font-size:26px;}}
 </style>
@@ -36,11 +37,12 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
 <div class="register-box">
     <div class="title" id="pageTitle">회원가입</div>
     <div id="reapplyNotice" class="hidden mb-4 p-3 rounded-xl bg-blue-50 text-blue-700 text-sm font-bold text-center leading-relaxed">반려된 회원가입 신청을 다시 제출합니다.</div>
+    <div id="savedInfo" class="hidden mb-4 p-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 text-xs leading-relaxed"></div>
 
     <input type="email" id="email" class="input" placeholder="이메일">
 
     <input type="password" id="password" class="input" placeholder="비밀번호">
-    <div class="message guide">*8~15글자, 숫자 포함</div>
+    <div id="pwGuide" class="message guide">*8~15글자, 숫자 포함</div>
 
     <input type="password" id="password-confirm" class="input" placeholder="비밀번호 확인">
     <div id="pwCheckMsg" class="message error">*비밀번호가 불일치합니다.</div>
@@ -49,7 +51,9 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
     <input type="tel" id="phone" class="input" placeholder="휴대폰 번호 (01012345678)">
     <input type="text" id="unit" class="input" placeholder="부대 선택" readonly>
     <input type="date" id="enlistDate" class="input" placeholder="입대일">
+    <p id="enlistGuide" class="date-guide">*입대일 입력</p>
     <input type="date" id="dischargeDate" class="input" placeholder="전역일">
+    <p id="dischargeGuide" class="date-guide">*전역일 입력</p>
 
     <button id="registerBtn" class="register-btn">회원가입</button>
 
@@ -80,6 +84,10 @@ const enlistDate=document.getElementById("enlistDate");
 const dischargeDate=document.getElementById("dischargeDate");
 const registerBtn=document.getElementById("registerBtn");
 const pwCheckMsg=document.getElementById("pwCheckMsg");
+const pwGuide=document.getElementById("pwGuide");
+const savedInfo=document.getElementById("savedInfo");
+const enlistGuide=document.getElementById("enlistGuide");
+const dischargeGuide=document.getElementById("dischargeGuide");
 
 const unitModal=document.getElementById("unitModal");
 const unitSearch=document.getElementById("unitSearch");
@@ -163,6 +171,14 @@ async function waitForProfile(userId){
     return false;
 }
 
+function escapeHtml(value){
+    return String(value ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
 
 async function prepareReapplyMode(){
     const urlParams=new URLSearchParams(location.search);
@@ -180,36 +196,38 @@ async function prepareReapplyMode(){
     document.getElementById("pageTitle").innerText="회원가입 재신청";
     document.getElementById("reapplyNotice").classList.remove("hidden");
     registerBtn.innerText="회원가입 재신청";
-
     email.value=session.user.email || "";
-    email.disabled=true;
-    email.classList.add("bg-gray-100","text-gray-400");
 
-    password.value="";
-    passwordConfirm.value="";
-    password.placeholder="재신청용 비밀번호";
-    passwordConfirm.placeholder="재신청용 비밀번호 확인";
-    pwCheckMsg.style.visibility="hidden";
+    savedInfo.innerHTML=`
+        <p class="font-bold text-gray-900 mb-1">기존 계정 정보는 그대로 유지됩니다.</p>
+        <p>이메일: ${escapeHtml(session.user.email || "")}</p>
+        <p>이름: ${escapeHtml(profile.name || session.user.user_metadata?.display_name || "")}</p>
+        <p>휴대폰: ${escapeHtml(profile.phone || "")}</p>
+    `;
+    savedInfo.classList.remove("hidden");
 
-    nameInput.value=profile.name || session.user.user_metadata?.display_name || "";
-    phone.value=profile.phone || "";
-    enlistDate.value=profile.enlist_date || "";
-    dischargeDate.value=profile.discharge_date || "";
-
-    // 재신청에서는 이미 저장된 입대일/전역일을 유지하고, 입력칸은 숨깁니다.
+    email.style.display="none";
+    password.style.display="none";
+    passwordConfirm.style.display="none";
+    pwGuide.style.display="none";
+    pwCheckMsg.style.display="none";
+    nameInput.style.display="none";
+    phone.style.display="none";
     enlistDate.style.display="none";
     dischargeDate.style.display="none";
+    enlistGuide.style.display="none";
+    dischargeGuide.style.display="none";
+
+    selectedUnitId=null;
+    unit.value="";
+    unit.placeholder="부대코드 다시 입력";
 }
 
-async function submitReapply(phoneNumber){
+async function submitReapply(){
     const {error}=await sb
         .from("profiles")
         .update({
-            name:nameInput.value.trim(),
             unit_id:selectedUnitId,
-            phone:phoneNumber,
-            enlist_date:enlistDate.value,
-            discharge_date:dischargeDate.value,
             user_approved:false,
             approval_status:"pending"
         })
@@ -256,28 +274,30 @@ registerBtn.addEventListener("click",async()=>{
         return;
     }
 
-    if(!passwordRegex.test(password.value)){
-        triggerToast("비밀번호는 8~15글자이며\n숫자를 포함해야 합니다.");
-        password.focus();
-        return;
-    }
+    if(!reapplyMode){
+        if(!passwordRegex.test(password.value)){
+            triggerToast("비밀번호는 8~15글자이며\n숫자를 포함해야 합니다.");
+            password.focus();
+            return;
+        }
 
-    if(password.value!==passwordConfirm.value){
-        triggerToast("비밀번호가 일치하지 않습니다.");
-        passwordConfirm.focus();
-        return;
-    }
+        if(password.value!==passwordConfirm.value){
+            triggerToast("비밀번호가 일치하지 않습니다.");
+            passwordConfirm.focus();
+            return;
+        }
 
-    if(nameInput.value.trim()===""){
-        triggerToast("이름을 입력하세요.");
-        nameInput.focus();
-        return;
-    }
+        if(nameInput.value.trim()===""){
+            triggerToast("이름을 입력하세요.");
+            nameInput.focus();
+            return;
+        }
 
-    if(!phoneRegex.test(phoneNumber)){
-        triggerToast("휴대폰 번호를 정확히 입력하세요.");
-        phone.focus();
-        return;
+        if(!phoneRegex.test(phoneNumber)){
+            triggerToast("휴대폰 번호를 정확히 입력하세요.");
+            phone.focus();
+            return;
+        }
     }
 
     if(selectedUnitId===null){
@@ -310,16 +330,7 @@ registerBtn.addEventListener("click",async()=>{
 
     try{
         if(reapplyMode){
-            const {error:passwordUpdateError}=await sb.auth.updateUser({
-                password:password.value
-            });
-
-            if(passwordUpdateError){
-                triggerToast("비밀번호 저장 실패\n"+passwordUpdateError.message);
-                return;
-            }
-
-            await submitReapply(phoneNumber);
+            await submitReapply();
             return;
         }
 

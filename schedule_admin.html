@@ -13,6 +13,18 @@
     <script src="toast.js"></script>
     <script src="auth.js"></script>
     <style>
+        *{
+            box-sizing:border-box;
+            font-family:'Pretendard','Noto Sans KR',sans-serif;
+        }
+
+        button,
+        input,
+        select,
+        textarea{
+            font-family:inherit;
+        }
+
         /* 출타 종류별 고유 색상 스키마 */
         .color-weekday { background-color: #3b82f6 !important; }
         .color-weekend { background-color: #1e3a8a !important; }
@@ -37,7 +49,10 @@
         .bar-start { border-top-left-radius: 4px; border-bottom-left-radius: 4px; margin-left: 2px; margin-right: -4px; }
         .bar-mid { border-radius: 0; margin-left: -4px; margin-right: -4px; }
         .bar-end { border-top-right-radius: 4px; border-bottom-right-radius: 4px; margin-left: -4px; margin-right: 2px; }
-    </style>
+    
+        /* 팝업보다 토스트/확인창이 위에 보이도록 보정 */
+        #custom-toast{z-index:20000!important;}
+</style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased relative">
 
@@ -71,51 +86,51 @@
     </div>
     <div id="page-status" class="max-w-md mx-auto min-h-screen flex flex-col">
         <div class="sticky top-0 z-20 bg-gray-50 shadow-sm border-b border-gray-200">
-            <header class="bg-white px-4 py-3 flex items-center">
-                <div class="w-24 flex justify-start">
-                    <button onclick="openSettingsModal()" class="h-[30px] px-3 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs flex items-center justify-center" aria-label="설정">설정 ⚙️</button>
-                </div>
-                <h2 id="page-title" class="flex-1 text-center text-lg font-bold tracking-tight truncate">출타</h2>
-                <div class="w-24 flex justify-end">
-                    <button onclick="location.href='admin_Only.html'" class="px-3 py-1.5 bg-[#F28C28] text-white font-bold rounded-xl text-xs active:scale-95 transition-all shadow-xs">관리자 탭</button>
-                </div>
-            </header>
+           <header class="bg-white px-4 py-3 flex items-center">
+    <div class="w-24 flex justify-start">
+        <button onclick="openSettingsModal()" class="h-[30px] px-3 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs flex items-center justify-center whitespace-nowrap" aria-label="설정">설정 ⚙️</button>
+    </div>
+    <h2 id="page-title" class="flex-1 text-center text-lg font-bold tracking-tight truncate">출타</h2>
+    <div class="w-24 flex justify-end">
+        <button onclick="location.href='admin_Only.html'" class="h-[30px] px-3 bg-[#F28C28] text-white font-bold rounded-xl text-xs active:scale-95 transition-all shadow-xs flex items-center justify-center whitespace-nowrap">관리자 탭</button>
+    </div>
+</header>
 
-            <div class="bg-white p-3">
-                <div class="max-w-md mx-auto">
-                    <nav class="flex gap-2 w-full mb-3">
-                        <div class="flex flex-1 gap-1">
-                            <button id="btn-tab-calendar" onclick="switchViewTab('calendar')" class="py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1">달력</button>
-                            <button id="btn-tab-list" onclick="switchViewTab('list')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">상세</button>
-                        </div>
-                        <div class="flex flex-1 gap-1">
-                            <button id="btn-tab-weekly" onclick="switchViewTab('weekly')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">이번주</button>
-                            <button id="btn-tab-next-weekly" onclick="switchViewTab('next-weekly')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">다음주</button>
-                        </div>
-                    </nav>
-
-                    <input type="text" id="search-input" oninput="filterData()" placeholder="출타자 이름 검색..." 
-                           class="w-full p-2 mb-3 border border-gray-200 rounded-lg text-sm">
-
-                    <div id="filter-container" class="flex flex-wrap gap-x-2 gap-y-2 text-xs font-bold text-gray-500 px-1">
-                        <button onclick="toggleFilter('weekday', this)" class="filter-btn active flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-lg transition-all duration-200 border border-blue-200">
-                            <span class="w-2 h-2 rounded-full color-weekday"></span>평일외출
-                        </button>
-                        <button onclick="toggleFilter('weekend', this)" class="filter-btn active flex items-center gap-1 bg-indigo-100 text-indigo-900 px-2 py-1 rounded-lg transition-all duration-200 border border-indigo-200">
-                            <span class="w-2 h-2 rounded-full color-weekend"></span>주말외출
-                        </button>
-                        <button onclick="toggleFilter('overnight', this)" class="filter-btn active flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2 py-1 rounded-lg transition-all duration-200 border border-emerald-200">
-                            <span class="w-2 h-2 rounded-full color-overnight"></span>외박
-                        </button>
-                        <button onclick="toggleFilter('vacation', this)" class="filter-btn active flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-lg transition-all duration-200 border border-red-200">
-                            <span class="w-2 h-2 rounded-full color-vacation"></span>휴가
-                        </button>
-                        <button id="btn-date-filter" onclick="showDateFilterModal()" class="bg-gray-100 px-3 py-1 rounded-lg text-gray-700 border border-gray-200 transition-all">
-                            기간 설정
-                        </button>
-                    </div>
-                </div>
+<div class="bg-white p-3">
+    <div class="max-w-md mx-auto">
+        <nav class="flex gap-2 w-full mb-3">
+            <div class="flex flex-1 gap-1">
+                <button id="btn-tab-calendar" onclick="switchViewTab('calendar')" class="py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1">달력</button>
+                <button id="btn-tab-list" onclick="switchViewTab('list')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">상세</button>
             </div>
+            <div class="flex flex-1 gap-1">
+                <button id="btn-tab-weekly" onclick="switchViewTab('weekly')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">이번주</button>
+                <button id="btn-tab-next-weekly" onclick="switchViewTab('next-weekly')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">다음주</button>
+            </div>
+        </nav>
+
+        <input type="text" id="search-input" oninput="filterData()" placeholder="출타자 이름 검색..." 
+               class="w-full p-2 mb-3 border border-gray-200 rounded-lg text-sm">
+
+        <div id="filter-container" class="flex flex-wrap gap-x-2 gap-y-2 text-xs font-bold text-gray-500 px-1">
+            <button onclick="toggleFilter('weekday', this)" class="filter-btn active flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-lg transition-all border border-blue-200">
+                <span class="w-2 h-2 rounded-full color-weekday"></span>평일외출
+            </button>
+            <button onclick="toggleFilter('weekend', this)" class="filter-btn active flex items-center gap-1 bg-indigo-100 text-indigo-900 px-3 py-1 rounded-lg transition-all border border-indigo-200">
+                <span class="w-2 h-2 rounded-full color-weekend"></span>주말외출
+            </button>
+            <button onclick="toggleFilter('overnight', this)" class="filter-btn active flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg transition-all border border-emerald-200">
+                <span class="w-2 h-2 rounded-full color-overnight"></span>외박
+            </button>
+            <button onclick="toggleFilter('vacation', this)" class="filter-btn active flex items-center gap-1 bg-red-100 text-red-800 px-3 py-1 rounded-lg transition-all border border-red-200">
+                <span class="w-2 h-2 rounded-full color-vacation"></span>휴가
+            </button>
+            <button id="btn-date-filter" onclick="showDateFilterModal()" class="bg-orange-50 text-[#F28C28] px-3 py-1 rounded-lg border border-orange-200 transition-all">
+                기간 설정
+            </button>
+        </div>
+    </div>
+</div>
         </div>
 
         <main class="max-w-md mx-auto w-full flex-1">
@@ -255,6 +270,8 @@
 
             <div class="space-y-4">
                 <div class="grid grid-cols-1 gap-2 pt-1">
+                    <button onclick="openProfileEditModal()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
+                    <button onclick="openHelpModal()" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
                     <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
                     <button onclick="handleDeleteAccount()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all">회원탈퇴</button>
                 </div>
@@ -272,9 +289,56 @@
             <span id="toast-message" class="whitespace-pre-wrap"></span>
     </div>
 
-    </body>
+    
+<div id="profile-edit-modal" class="fixed inset-0 hidden flex items-center justify-center z-[10000] bg-black/50 p-4">
+    <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm max-h-[88vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+            <h3 class="text-lg font-bold text-gray-900">개인정보 수정</h3>
+            <button onclick="closeProfileEditModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+        </div>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">이름</label>
+                <input id="profile-edit-name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+            </div>
+            <div id="profile-edit-position-wrap" class="hidden">
+                <label class="block text-xs font-bold text-gray-500 mb-1">직책</label>
+                <input id="profile-edit-position" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">휴대폰번호</label>
+                <input id="profile-edit-phone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600" placeholder="01012345678">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">이메일</label>
+                <input id="profile-edit-email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                <p class="text-[11px] text-gray-400 mt-1 leading-relaxed">이메일을 변경하면 Supabase 설정에 따라 새 이메일 확인이 필요할 수 있습니다.</p>
+            </div>
+            <div class="pt-2 border-t border-gray-100">
+                <label class="block text-xs font-bold text-red-500 mb-1">현재 비밀번호 확인</label>
+                <input id="profile-edit-password" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-red-400" placeholder="정보 수정을 위해 입력">
+            </div>
+            <button onclick="saveProfileEdit()" class="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-all">수정 저장</button>
+            <button onclick="closeProfileEditModal()" class="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">취소</button>
+        </div>
+    </div>
+</div>
 
-    <script>
+<div id="help-modal" class="fixed inset-0 hidden flex items-center justify-center z-[10000] bg-black/50 p-4">
+    <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm max-h-[88vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+            <h3 class="text-lg font-bold text-gray-900">도움말</h3>
+            <button onclick="closeHelpModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+        </div>
+        <div id="help-content" class="space-y-4 text-sm text-gray-700 leading-relaxed"></div>
+        <button onclick="closeHelpModal()" class="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+    </div>
+</div>
+
+</body>
+
+    
+<script>
 
 
         let outData = [];
@@ -487,8 +551,7 @@
             closeModal();
             triggerToast('수정되었습니다.');
             await loadData();
-            renderListTab();
-            renderCalendar();
+            renderActiveView();
         }
 
         async function handleFormSubmit() {
@@ -681,7 +744,8 @@
 
                 const toast=document.createElement("div");
                 toast.id="custom-confirm-toast";
-                toast.className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-6";
+                toast.className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/60 p-6";
+                toast.style.zIndex = '20000';
 
                 toast.innerHTML=`
                     <div class="bg-white rounded-2xl p-6 text-center shadow-2xl max-w-xs w-full">
@@ -711,7 +775,123 @@
             });
         }
 
-        async function handleLogout(){
+        
+function getProfileRoleForHelp(){
+    return currentProfile?.role || 'user';
+}
+function openProfileEditModal(){
+    const isAdmin = currentProfile?.role === 'admin';
+    document.getElementById('profile-edit-name').value = currentProfile?.name || currentProfile?.display_name || '';
+    document.getElementById('profile-edit-phone').value = currentProfile?.phone || '';
+    document.getElementById('profile-edit-email').value = currentUser?.email || '';
+    document.getElementById('profile-edit-password').value = '';
+    const positionWrap = document.getElementById('profile-edit-position-wrap');
+    if(positionWrap){
+        positionWrap.classList.toggle('hidden', !isAdmin);
+        document.getElementById('profile-edit-position').value = currentProfile?.position || '';
+        if(isAdmin) loadMyAdminPosition();
+    }
+    document.getElementById('profile-edit-modal').classList.remove('hidden');
+}
+function closeProfileEditModal(){
+    document.getElementById('profile-edit-modal').classList.add('hidden');
+}
+async function loadMyAdminPosition(){
+    if(!currentUser || currentProfile?.role !== 'admin') return;
+    const {data,error}=await sb.from('is_admin').select('position').eq('id',currentUser.id).maybeSingle();
+    if(!error && data?.position !== undefined){
+        document.getElementById('profile-edit-position').value = data.position || '';
+        currentProfile.position = data.position || '';
+    }
+}
+async function saveProfileEdit(){
+    if(!currentUser || !currentProfile){
+        triggerToast('로그인 정보를 찾을 수 없습니다.');
+        return;
+    }
+    const name=document.getElementById('profile-edit-name').value.trim();
+    const phone=document.getElementById('profile-edit-phone').value.trim();
+    const email=document.getElementById('profile-edit-email').value.trim();
+    const password=document.getElementById('profile-edit-password').value;
+    const isAdmin=currentProfile?.role==='admin';
+    const positionEl=document.getElementById('profile-edit-position');
+    const position=isAdmin && positionEl ? positionEl.value.trim() : '';
+    if(!name || !phone || !email || !password){
+        triggerToast('이름, 휴대폰번호, 이메일, 비밀번호를 모두 입력해주세요.');
+        return;
+    }
+    if(isAdmin && !position){
+        triggerToast('직책을 입력해주세요.');
+        return;
+    }
+    const loginEmail=currentUser.email || email;
+    const {error:verifyError}=await sb.auth.signInWithPassword({email:loginEmail,password});
+    if(verifyError){
+        triggerToast('비밀번호가 일치하지 않습니다.');
+        return;
+    }
+    const profileUpdates={name, phone};
+    const {error:profileError}=await sb.from('profiles').update(profileUpdates).eq('id',currentUser.id);
+    if(profileError){
+        triggerToast('개인정보 수정 실패\n'+profileError.message);
+        return;
+    }
+    if(isAdmin){
+        const {error:positionError}=await sb.from('is_admin').update({position}).eq('id',currentUser.id);
+        if(positionError){
+            console.warn(positionError);
+            triggerToast('직책 저장 실패\n관리자 승인 정보 정책을 확인해주세요.');
+            return;
+        }
+    }
+    const authUpdate={data:{display_name:name, phone}};
+    if(email !== currentUser.email) authUpdate.email=email;
+    const {data:authData,error:authError}=await sb.auth.updateUser(authUpdate);
+    if(authError){
+        triggerToast('프로필은 저장되었지만 이메일 수정 실패\n'+authError.message);
+        currentProfile={...currentProfile,...profileUpdates, ...(isAdmin?{position}: {})};
+        currentUserName = typeof getCurrentUserName === 'function' ? getCurrentUserName() : name;
+        return;
+    }
+    if(authData?.user) currentUser=authData.user;
+    currentProfile={...currentProfile,...profileUpdates, ...(isAdmin?{position}: {})};
+    currentUserName = typeof getCurrentUserName === 'function' ? getCurrentUserName() : name;
+    closeProfileEditModal();
+    triggerToast(email !== loginEmail ? '개인정보가 저장되었습니다.\n이메일 확인이 필요할 수 있습니다.' : '개인정보가 저장되었습니다.');
+    if(typeof updateTitle === 'function') updateTitle();
+    if(typeof renderActiveView === 'function') renderActiveView();
+    if(typeof renderCurrentTab === 'function') renderCurrentTab();
+}
+function openHelpModal(){
+    const role=getProfileRoleForHelp();
+    const isAdmin=role==='admin';
+    const help=document.getElementById('help-content');
+    help.innerHTML = isAdmin ? `
+        <div class="p-4 bg-orange-50 rounded-2xl border border-orange-100">
+            <h4 class="font-black text-[#F28C28] mb-2">관리자 화면 전체 안내</h4>
+            <p>관리자는 소속 부대의 출타 현황을 확인하고, 부대원 가입 승인, 부대 정보 관리, 출타율 확인을 할 수 있습니다. 설정의 개인정보 수정은 현재 비밀번호 확인 후 저장됩니다.</p>
+        </div>
+        <div><h4 class="font-black mb-1">출타 탭</h4><p>달력, 상세, 이번주, 다음주 화면으로 부대원의 출타를 확인합니다. 관리자 화면에서는 부대원 출타를 길게 눌러 삭제할 수 있지만, 임의 수정은 하지 않도록 구성되어 있습니다.</p></div>
+        <div><h4 class="font-black mb-1">출타율 달력</h4><p>부대원 수 대비 해당 날짜에 출타 중인 인원의 비율을 달력에 표시합니다. 전체 출타 또는 휴가만 기준으로 전환할 수 있고, 비율이 높을수록 더 진한 색으로 표시됩니다.</p></div>
+        <div><h4 class="font-black mb-1">출타율 상세</h4><p>날짜별 출타율을 목록으로 확인합니다. 각 날짜의 휴가자와 휴가 외 출타자를 버튼으로 나누어 볼 수 있어, 당일 인원 공백을 빠르게 확인할 수 있습니다.</p></div>
+        <div><h4 class="font-black mb-1">부대원 관리</h4><p>가입 희망자를 승인하거나 반려합니다. 승인된 인원은 부대원 목록에 포함되고 출타율 계산 대상이 됩니다. 반려된 인원은 다시 부대코드로 재신청할 수 있습니다.</p></div>
+        <div><h4 class="font-black mb-1">부대 수정</h4><p>관리자가 소속 부대를 검색해 가입하거나, 새 부대를 생성하고, 부대명을 수정하거나 삭제 신청을 할 수 있습니다. 삭제 신청은 즉시 삭제가 아니라 개발자 확인 절차를 거치도록 설계되어 있습니다.</p></div>
+        <div><h4 class="font-black mb-1">타부대 조회</h4><p>다른 부대를 검색하여 달력, 상세, 이번주, 다음주 출타 현황을 조회합니다. 이 화면은 오로지 조회 전용이므로 삭제나 수정 기능은 작동하지 않습니다. 자주 보는 부대는 별표를 눌러 즐겨찾기하면 목록 상단에 고정됩니다.</p></div>
+        <div><h4 class="font-black mb-1">개인정보 수정</h4><p>이름, 직책, 휴대폰번호, 이메일을 수정할 수 있습니다. 보안을 위해 저장 시 현재 비밀번호를 다시 입력해야 합니다.</p></div>
+    ` : `
+        <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100"><h4 class="font-black text-emerald-700 mb-2">사용자 화면 안내</h4><p>출타 등록, 달력 확인, 상세 목록, 이번주/다음주 예정 출타 확인을 할 수 있습니다.</p></div>
+        <div><h4 class="font-black mb-1">출타 등록</h4><p>출타 형태를 선택하고 행선지, 시작일, 종료일을 입력해 출타를 등록합니다. 평일외출과 주말외출은 하루 일정으로, 외박은 1박 2일로 자동 설정됩니다.</p></div>
+        <div><h4 class="font-black mb-1">달력/상세/이번주/다음주</h4><p>달력은 월간 출타 현황을 보여주고, 상세는 오늘 출타와 현재 진행 중인 출타를 보여줍니다. 이번주와 다음주 탭에서는 주간 예정 출타를 빠르게 확인합니다.</p></div>
+        <div><h4 class="font-black mb-1">주 행선지</h4><p>설정에서 출타 종류별 주 행선지를 저장하면, 출타 형태를 선택할 때 해당 행선지가 먼저 자동 입력됩니다. 등록 전 자유롭게 수정할 수 있습니다.</p></div>
+        <div><h4 class="font-black mb-1">개인정보 수정</h4><p>이름, 휴대폰번호, 이메일을 수정할 수 있습니다. 보안을 위해 저장 시 현재 비밀번호를 다시 입력해야 합니다.</p></div>
+    `;
+    document.getElementById('help-modal').classList.remove('hidden');
+}
+function closeHelpModal(){
+    document.getElementById('help-modal').classList.add('hidden');
+}
+
+async function handleLogout(){
             const ok = await showConfirmToast(
                 "로그아웃 하시겠습니까?",
                 "로그아웃",
