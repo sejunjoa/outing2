@@ -248,33 +248,15 @@ if(position.value.trim()===""){
             return;
         }
 
-        const {error:updateError}=await sb
-            .from("profiles")
-            .update({
-                unit_id:selectedUnitId,
-                position:position.value.trim(),
-                phone:phoneNumber
-            })
-            .eq("id",data.user.id);
+        const {error:updateError}=await sb.rpc('submit_admin_application', {
+            p_name: nameInput.value.trim(),
+            p_phone: phoneNumber,
+            p_position: position.value.trim(),
+            p_unit_id: selectedUnitId
+        });
 
         if(updateError){
-            triggerToast("회원정보 저장 실패\n"+updateError.message);
-            return;
-        }
-
-        const {error:adminUpdateError}=await sb
-            .from("is_admin")
-            .upsert({
-                id:data.user.id,
-                isadmin:false,
-                name:nameInput.value.trim(),
-                phone:phoneNumber
-            }, {
-                onConflict:"id"
-            });
-
-        if(adminUpdateError){
-            triggerToast("관리자 신청정보 저장 실패\n"+adminUpdateError.message);
+            triggerToast("관리자 신청정보 저장 실패\n"+updateError.message);
             return;
         }
 

@@ -36,7 +36,7 @@
             height: 14px;
             font-size: 10px;
             color: white !important;
-            font-weight: 800;
+            font-weight: 600;
             text-align: center;
             line-height: 14px; 
             overflow: hidden;
@@ -112,20 +112,20 @@
         <input type="text" id="search-input" oninput="filterData()" placeholder="출타자 이름 검색..." 
                class="w-full p-2 mb-3 border border-gray-200 rounded-lg text-sm">
 
-        <div id="filter-container" class="flex flex-wrap gap-x-2 gap-y-2 text-xs font-bold text-gray-500 px-1">
-            <button onclick="toggleFilter('weekday', this)" class="filter-btn active flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-lg transition-all border border-blue-200">
+        <div id="filter-container" class="flex flex-nowrap items-center gap-1 text-[10px] font-bold text-gray-500 w-full">
+            <button onclick="toggleFilter('weekday', this)" class="filter-btn active flex items-center gap-1 bg-blue-100 text-blue-800 px-1.5 py-1 rounded-lg transition-all border border-blue-200 whitespace-nowrap shrink-0">
                 <span class="w-2 h-2 rounded-full color-weekday"></span>평일외출
             </button>
-            <button onclick="toggleFilter('weekend', this)" class="filter-btn active flex items-center gap-1 bg-indigo-100 text-indigo-900 px-3 py-1 rounded-lg transition-all border border-indigo-200">
+            <button onclick="toggleFilter('weekend', this)" class="filter-btn active flex items-center gap-1 bg-indigo-100 text-indigo-900 px-1.5 py-1 rounded-lg transition-all border border-indigo-200 whitespace-nowrap shrink-0">
                 <span class="w-2 h-2 rounded-full color-weekend"></span>주말외출
             </button>
-            <button onclick="toggleFilter('overnight', this)" class="filter-btn active flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg transition-all border border-emerald-200">
+            <button onclick="toggleFilter('overnight', this)" class="filter-btn active flex items-center gap-1 bg-emerald-100 text-emerald-800 px-1.5 py-1 rounded-lg transition-all border border-emerald-200 whitespace-nowrap shrink-0">
                 <span class="w-2 h-2 rounded-full color-overnight"></span>외박
             </button>
-            <button onclick="toggleFilter('vacation', this)" class="filter-btn active flex items-center gap-1 bg-red-100 text-red-800 px-3 py-1 rounded-lg transition-all border border-red-200">
+            <button onclick="toggleFilter('vacation', this)" class="filter-btn active flex items-center gap-1 bg-red-100 text-red-800 px-1.5 py-1 rounded-lg transition-all border border-red-200 whitespace-nowrap shrink-0">
                 <span class="w-2 h-2 rounded-full color-vacation"></span>휴가
             </button>
-            <button id="btn-date-filter" onclick="showDateFilterModal()" class="bg-orange-50 text-[#F28C28] px-3 py-1 rounded-lg border border-orange-200 transition-all">
+            <button id="btn-date-filter" onclick="showDateFilterModal()" class="bg-orange-50 text-[#F28C28] w-[78px] h-[26px] px-1 py-1 rounded-lg border border-orange-200 transition-all text-[9px] leading-tight whitespace-nowrap overflow-hidden shrink-0">
                 기간 설정
             </button>
         </div>
@@ -309,11 +309,7 @@
                 <label class="block text-xs font-bold text-gray-500 mb-1">휴대폰번호</label>
                 <input id="profile-edit-phone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600" placeholder="01012345678">
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">이메일</label>
-                <input id="profile-edit-email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                <p class="text-[11px] text-gray-400 mt-1 leading-relaxed">이메일을 변경하면 Supabase 설정에 따라 새 이메일 확인이 필요할 수 있습니다.</p>
-            </div>
+
             <div class="pt-2 border-t border-gray-100">
                 <label class="block text-xs font-bold text-red-500 mb-1">현재 비밀번호 확인</label>
                 <input id="profile-edit-password" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-red-400" placeholder="정보 수정을 위해 입력">
@@ -783,7 +779,6 @@ function openProfileEditModal(){
     const isAdmin = currentProfile?.role === 'admin';
     document.getElementById('profile-edit-name').value = currentProfile?.name || currentProfile?.display_name || '';
     document.getElementById('profile-edit-phone').value = currentProfile?.phone || '';
-    document.getElementById('profile-edit-email').value = currentUser?.email || '';
     document.getElementById('profile-edit-password').value = '';
     const positionWrap = document.getElementById('profile-edit-position-wrap');
     if(positionWrap){
@@ -811,20 +806,19 @@ async function saveProfileEdit(){
     }
     const name=document.getElementById('profile-edit-name').value.trim();
     const phone=document.getElementById('profile-edit-phone').value.trim();
-    const email=document.getElementById('profile-edit-email').value.trim();
     const password=document.getElementById('profile-edit-password').value;
     const isAdmin=currentProfile?.role==='admin';
     const positionEl=document.getElementById('profile-edit-position');
     const position=isAdmin && positionEl ? positionEl.value.trim() : '';
-    if(!name || !phone || !email || !password){
-        triggerToast('이름, 휴대폰번호, 이메일, 비밀번호를 모두 입력해주세요.');
+    if(!name || !phone || !password){
+        triggerToast('이름, 휴대폰번호, 비밀번호를 모두 입력해주세요.');
         return;
     }
     if(isAdmin && !position){
         triggerToast('직책을 입력해주세요.');
         return;
     }
-    const loginEmail=currentUser.email || email;
+    const loginEmail=currentUser.email;
     const {error:verifyError}=await sb.auth.signInWithPassword({email:loginEmail,password});
     if(verifyError){
         triggerToast('비밀번호가 일치하지 않습니다.');
@@ -845,10 +839,9 @@ async function saveProfileEdit(){
         }
     }
     const authUpdate={data:{display_name:name, phone}};
-    if(email !== currentUser.email) authUpdate.email=email;
     const {data:authData,error:authError}=await sb.auth.updateUser(authUpdate);
     if(authError){
-        triggerToast('프로필은 저장되었지만 이메일 수정 실패\n'+authError.message);
+        triggerToast('프로필 정보 저장 중 오류가 발생했습니다.\n'+authError.message);
         currentProfile={...currentProfile,...profileUpdates, ...(isAdmin?{position}: {})};
         currentUserName = typeof getCurrentUserName === 'function' ? getCurrentUserName() : name;
         return;
@@ -857,7 +850,7 @@ async function saveProfileEdit(){
     currentProfile={...currentProfile,...profileUpdates, ...(isAdmin?{position}: {})};
     currentUserName = typeof getCurrentUserName === 'function' ? getCurrentUserName() : name;
     closeProfileEditModal();
-    triggerToast(email !== loginEmail ? '개인정보가 저장되었습니다.\n이메일 확인이 필요할 수 있습니다.' : '개인정보가 저장되었습니다.');
+    triggerToast('개인정보가 저장되었습니다.');
     if(typeof updateTitle === 'function') updateTitle();
     if(typeof renderActiveView === 'function') renderActiveView();
     if(typeof renderCurrentTab === 'function') renderCurrentTab();
@@ -1309,6 +1302,11 @@ async function handleLogout(){
                 dayDiv.appendChild(dateNo);
 
                 const checkStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                if (checkStr === getTodayString()) {
+                    dayDiv.classList.add('bg-emerald-50', 'ring-2', 'ring-inset', 'ring-emerald-500', 'rounded-lg');
+                    dateNo.classList.remove('text-red-500', 'text-blue-600');
+                    dateNo.classList.add('text-emerald-700', 'font-black');
+                }
                 const todaysOutings = filteredData.filter(item => checkStr >= item.start && checkStr <= item.end);
 
                 let currentSlot = 0;

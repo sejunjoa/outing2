@@ -15,6 +15,9 @@
 *{box-sizing:border-box;font-family:'Pretendard','Noto Sans KR',sans-serif;}
 .rate-cell{min-height:74px;border-top:1px solid #f1f5f9;position:relative;padding:4px;border-radius:0;overflow:hidden;}
 .rate-value{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;}
+.rate-summary-popover{position:fixed;z-index:12000;width:154px;padding:10px 12px;background:rgba(255,255,255,.98);border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-size:12px;line-height:1.2;backdrop-filter:blur(8px);}
+.rate-summary-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0;font-weight:800;color:#374151;}
+.rate-summary-mark{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none;}
 .tab-active{background:#F28C28;color:white;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .card{background:white;border:1px solid #f1f5f9;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .color-weekday { background-color:#3b82f6!important; }
@@ -111,11 +114,11 @@
                     <div id="unit-transfer-list" class="space-y-2"></div>
                 </div>
                 <div>
-                    <h3 class="font-extrabold text-gray-700 text-sm mb-2">&lt;관리자&gt;</h3>
+                    <h3 id="admin-count-title" class="font-extrabold text-gray-700 text-sm mb-2">&lt;관리자(0)&gt;</h3>
                     <div id="admin-list" class="space-y-2"></div>
                 </div>
                 <div>
-                    <h3 class="font-extrabold text-gray-700 text-sm mb-2">&lt;부대원&gt;</h3>
+                    <h3 id="member-count-title" class="font-extrabold text-gray-700 text-sm mb-2">&lt;부대원(0)&gt;</h3>
                     <div id="member-list" class="space-y-2"></div>
                 </div>
             </section>
@@ -197,6 +200,8 @@
     </main>
 </div>
 
+<div id="rate-summary-popover" class="rate-summary-popover hidden" role="dialog" aria-live="polite"></div>
+
 <div id="outing-popup" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl">
         <h3 id="outing-popup-title" class="text-lg font-bold text-center mb-4"></h3>
@@ -251,11 +256,6 @@
             <div>
                 <label class="block text-xs font-bold text-gray-500 mb-1">휴대폰번호</label>
                 <input id="profile-edit-phone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600" placeholder="01012345678">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">이메일</label>
-                <input id="profile-edit-email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                <p class="text-[11px] text-gray-400 mt-1 leading-relaxed">이메일을 변경하면 Supabase 설정에 따라 새 이메일 확인이 필요할 수 있습니다.</p>
             </div>
             <div class="pt-2 border-t border-gray-100">
                 <label class="block text-xs font-bold text-red-500 mb-1">현재 비밀번호 확인</label>
@@ -334,7 +334,7 @@ async function loadData(){
     if(!currentProfile?.unit_id){outData=[];profiles=[];return;}
     const [{data:outingData,error:outingError},{data:profileData,error:profileError}]=await Promise.all([
         sb.from('outing').select('*').eq('unit_id',currentProfile.unit_id).order('start'),
-        sb.from('profiles').select('id,name,phone,role,unit_id,user_approved,approval_status').eq('unit_id',currentProfile.unit_id).order('name')
+        sb.from('profiles').select('id,name,phone,role,unit_id,user_approved,approval_status,enlist_date,discharge_date').eq('unit_id',currentProfile.unit_id).order('name')
     ]);
     if(outingError){console.error(outingError);triggerToast('출타 정보를 불러오지 못했습니다.');}
     if(profileError){console.error(profileError);triggerToast('부대원 정보를 불러오지 못했습니다.');}
@@ -423,7 +423,42 @@ function changeMonth(offset){
     if(currentMonth<0){currentMonth=11;currentYear--;}
     renderRateCalendar();
 }
+function closeRateSummary(){
+    const popover=document.getElementById('rate-summary-popover');
+    if(popover) popover.classList.add('hidden');
+}
+function showRateSummary(event,dateStr){
+    event.stopPropagation();
+    const popover=document.getElementById('rate-summary-popover');
+    if(!popover) return;
+    const counts={weekday:0,weekend:0,overnight:0,vacation:0};
+    getDayOutings(dateStr,'all').forEach(item=>{
+        if(Object.prototype.hasOwnProperty.call(counts,item.type)) counts[item.type]++;
+    });
+    const rows=[
+        ['weekday','평일외출'],
+        ['weekend','주말외출'],
+        ['overnight','외박'],
+        ['vacation','휴가']
+    ];
+    popover.innerHTML=rows.map(([type,label])=>`<div class="rate-summary-row"><span class="flex items-center gap-2"><span class="rate-summary-mark color-${type}"></span>${label}</span><span>: ${counts[type]}</span></div>`).join('');
+    popover.classList.remove('hidden');
+
+    const width=popover.offsetWidth || 154;
+    const height=popover.offsetHeight || 120;
+    const margin=8;
+    const pointX=event.clientX;
+    const pointY=event.clientY;
+    let left=pointX+10;
+    let top=pointY-height-10;
+    if(left+width>window.innerWidth-margin) left=window.innerWidth-width-margin;
+    if(left<margin) left=margin;
+    if(top<margin) top=Math.min(window.innerHeight-height-margin, pointY+10);
+    popover.style.left=`${left}px`;
+    popover.style.top=`${Math.max(margin,top)}px`;
+}
 function renderRateCalendar(){
+    closeRateSummary();
     const grid=document.getElementById('rate-calendar-grid');
     const title=document.getElementById('calendar-title');
     grid.innerHTML='';
@@ -450,8 +485,22 @@ function renderRateCalendar(){
         const style=getRateStyle(percent, rateMode);
         const dow=new Date(currentYear,currentMonth,date).getDay();
         const dayDiv=document.createElement('div');
-        dayDiv.className='rate-cell';
+        dayDiv.className='rate-cell cursor-pointer active:scale-[.98] transition-transform';
         dayDiv.style.background=style.background;
+        if(dateStr===getTodayString()){
+            dayDiv.classList.add('ring-2','ring-inset','ring-emerald-500','rounded-lg');
+        }
+        dayDiv.setAttribute('role','button');
+        dayDiv.setAttribute('tabindex','0');
+        dayDiv.setAttribute('aria-label',`${dateStr} 출타 요약 보기`);
+        dayDiv.onclick=(event)=>showRateSummary(event,dateStr);
+        dayDiv.onkeydown=(event)=>{
+            if(event.key==='Enter' || event.key===' '){
+                event.preventDefault();
+                const rect=dayDiv.getBoundingClientRect();
+                showRateSummary({stopPropagation(){},clientX:rect.right-4,clientY:rect.top+4},dateStr);
+            }
+        };
         dayDiv.innerHTML=`
             <span class="text-xs font-semibold ${dow===0?'text-red-500':dow===6?'text-blue-600':'text-gray-500'}">${date}</span>
             <span class="rate-value" style="color:${style.color}">${percent}</span>
@@ -459,7 +508,6 @@ function renderRateCalendar(){
         grid.appendChild(dayDiv);
     }
 }
-
 function changeDetailMonth(offset){
     detailMonth+=offset;
     if(detailMonth>11){detailMonth=0;detailYear++;}
@@ -479,16 +527,17 @@ function renderRateDetail(){
         const vacationRate=getRate(dateStr,'vacation');
         const mmdd=`${detailMonth+1}/${date}(${days[d.getDay()]})`;
         const card=document.createElement('div');
-        card.className='card p-4 flex items-center gap-3';
+        const isToday=dateStr===getTodayString();
+        card.className=`card mx-1 p-2 grid grid-cols-[56px_82px_minmax(0,1fr)] items-center gap-x-2 gap-y-2 ${isToday?'bg-yellow-50 border-yellow-300 ring-1 ring-yellow-200':''}`;
         card.innerHTML=`
-            <div class="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center font-black text-gray-700 shrink-0">${mmdd}</div>
-            <div class="flex-1 min-w-0 flex items-end gap-2">
-                <div class="text-3xl font-black text-[#F28C28] leading-none">${allRate}</div>
-                <div class="text-lg font-black text-gray-900 leading-none mb-0.5">${vacationRate}</div>
+            <div class="w-14 h-14 rounded-xl ${isToday?'bg-yellow-100 border-yellow-300':'bg-gray-100 border-gray-200'} border flex items-center justify-center font-black text-[11px] text-gray-700 shrink-0">${mmdd}</div>
+            <div class="grid grid-cols-2 items-end gap-2 w-[82px] pl-1">
+                <div class="text-2xl font-black text-[#F28C28] leading-none text-center tabular-nums">${allRate}</div>
+                <div class="text-base font-black text-gray-900 leading-none mb-0.5 text-center tabular-nums">${vacationRate}</div>
             </div>
-            <div class="shrink-0 flex flex-row gap-2">
-                <button onclick="showOutingPopup('${dateStr}','vacation')" class="min-w-[72px] h-12 px-4 py-3 bg-orange-50 text-[#F28C28] rounded-xl text-sm font-black border border-orange-100 flex items-center justify-center">휴가자</button>
-                <button onclick="showOutingPopup('${dateStr}','non-vacation')" class="min-w-[96px] h-12 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-black border border-gray-200 flex items-center justify-center">휴가 외 출타자</button>
+            <div class="min-w-0 flex flex-row justify-end gap-1">
+                <button onclick="showOutingPopup('${dateStr}','vacation')" class="min-w-[54px] h-10 px-2 py-2 bg-orange-50 text-[#F28C28] rounded-xl text-xs font-black border border-orange-100 flex items-center justify-center whitespace-nowrap">휴가자</button>
+                <button onclick="showOutingPopup('${dateStr}','non-vacation')" class="min-w-[76px] h-10 px-2 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-black border border-gray-200 flex items-center justify-center whitespace-nowrap">휴가 외 출타자</button>
             </div>`;
         list.appendChild(card);
     }
@@ -524,17 +573,32 @@ function showOutingPopup(dateStr, group){
 }
 function closeOutingPopup(){document.getElementById('outing-popup').classList.add('hidden');}
 
-function createMemberCard(profile, extra=''){
+function createMemberCard(profile, extra='', showServiceDates=false){
+    const serviceDates=showServiceDates ? `
+            <p class="text-xs text-gray-500 mt-1 truncate">입대일: ${escapeHtml(profile.enlist_date || '미입력')}</p>
+            <p class="text-xs text-gray-500 mt-1 truncate">전역일: ${escapeHtml(profile.discharge_date || '미입력')}</p>` : '';
     return `<div class="card p-4 flex justify-between items-center text-sm">
         <div class="min-w-0 mr-2">
             <p class="font-bold text-gray-900 text-base truncate">${escapeHtml(profile.name || '이름 없음')}</p>
             <p class="text-xs text-gray-500 mt-1 truncate">연락처: ${escapeHtml(profile.phone || '미입력')}</p>
+            ${serviceDates}
         </div>${extra}</div>`;
 }
 function renderMembers(){
     const pending=profiles.filter(p=>p.role==='user' && p.user_approved!==true && (p.approval_status||'pending')==='pending');
     const admins=profiles.filter(p=>p.role==='admin');
-    const members=profiles.filter(p=>p.role==='user' && p.user_approved===true);
+    const members=profiles
+        .filter(p=>p.role==='user' && p.user_approved===true)
+        .sort((a,b)=>{
+            const aDate=a.enlist_date || '9999-12-31';
+            const bDate=b.enlist_date || '9999-12-31';
+            return aDate.localeCompare(bDate);
+        });
+    const adminCountTitle=document.getElementById('admin-count-title');
+    const memberCountTitle=document.getElementById('member-count-title');
+    if(adminCountTitle) adminCountTitle.innerText=`<관리자(${admins.length})>`;
+    if(memberCountTitle) memberCountTitle.innerText=`<부대원(${members.length})>`;
+
     const transferList=document.getElementById('unit-transfer-list');
     if(transferList){
         transferList.innerHTML=unitTransferRequests.length?unitTransferRequests.map(req=>createUnitTransferCard(req)).join(''):'<div class="text-center py-8 text-sm text-gray-400 bg-white rounded-xl border border-gray-100">부대이동 신청자가 없습니다.</div>';
@@ -545,7 +609,7 @@ function renderMembers(){
             <button onclick="rejectUser('${p.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-black">반려</button>
         </div>`)).join(''):'<div class="text-center py-8 text-sm text-gray-400 bg-white rounded-xl border border-gray-100">가입 희망자가 없습니다.</div>';
     document.getElementById('admin-list').innerHTML=admins.length?admins.map(p=>createMemberCard(p)).join(''):'<div class="text-center py-8 text-sm text-gray-400 bg-white rounded-xl border border-gray-100">관리자가 없습니다.</div>';
-    document.getElementById('member-list').innerHTML=members.length?members.map(p=>createMemberCard(p)).join(''):'<div class="text-center py-8 text-sm text-gray-400 bg-white rounded-xl border border-gray-100">부대원이 없습니다.</div>';
+    document.getElementById('member-list').innerHTML=members.length?members.map(p=>createMemberCard(p,'',true)).join(''):'<div class="text-center py-8 text-sm text-gray-400 bg-white rounded-xl border border-gray-100">부대원이 없습니다.</div>';
 }
 
 function createUnitTransferCard(req){
@@ -589,11 +653,9 @@ async function approveUnitTransfer(requestId, userId, fromUnitId){
 async function rejectUnitTransfer(requestId){
     const ok=await showConfirmToast('부대이동 신청을 반려하시겠습니까?','반려','취소');
     if(!ok) return;
-    const {error}=await sb
-        .from('unit_transfer_requests')
-        .update({status:'rejected', reviewed_by:currentUser.id, reviewed_at:new Date().toISOString()})
-        .eq('id', requestId)
-        .eq('to_unit_id', currentProfile.unit_id);
+    const {error}=await sb.rpc('reject_unit_transfer_request', {
+        p_request_id: requestId
+    });
     if(error){
         triggerToast('부대이동 반려 실패\n'+error.message);
         return;
@@ -604,22 +666,33 @@ async function rejectUnitTransfer(requestId){
 }
 
 async function approveUser(userId){
-    const {error}=await sb.from('profiles').update({user_approved:true, approval_status:'approved'}).eq('id',userId).eq('unit_id',currentProfile.unit_id).eq('role','user');
-    if(error){triggerToast('승인 실패\n'+error.message);return;}
+    const {error}=await sb.rpc('approve_unit_user', {
+        target_user_id: userId
+    });
+
+    if(error){
+        triggerToast('승인 실패\n'+error.message);
+        return;
+    }
+
     triggerToast('승인되었습니다.');
-    await loadData(); renderMembers();
+    await loadData();
+    renderMembers();
+    renderRateCalendar();
 }
+
 async function rejectUser(userId){
     const ok=await showConfirmToast('회원가입 신청을 반려하시겠습니까?','반려','취소');
     if(!ok) return;
 
-    const {error}=await sb.from('profiles')
-        .update({unit_id:null, user_approved:false, approval_status:'rejected'})
-        .eq('id',userId)
-        .eq('unit_id',currentProfile.unit_id)
-        .eq('role','user');
+    const {error}=await sb.rpc('reject_unit_user', {
+        target_user_id: userId
+    });
 
-    if(error){triggerToast('반려 실패\n'+error.message);return;}
+    if(error){
+        triggerToast('반려 실패\n'+error.message);
+        return;
+    }
 
     profiles = profiles.filter(profile => profile.id !== userId);
     renderMembers();
@@ -627,6 +700,7 @@ async function rejectUser(userId){
 
     await loadData();
     renderMembers();
+    renderRateCalendar();
 }
 
 
@@ -705,10 +779,9 @@ async function joinUnit(unitId){
         return;
     }
 
-    const {error:updateError}=await sb
-        .from('profiles')
-        .update({unit_id:unitData.id})
-        .eq('id', currentUser.id);
+    const {error:updateError}=await sb.rpc('join_admin_unit', {
+        p_unit_id: unitData.id
+    });
 
     if(updateError){
         triggerToast('부대 가입 실패\n' + updateError.message);
@@ -748,14 +821,16 @@ async function createUnit(){
     const name=document.getElementById('new-unit-name').value.trim();
     if(!name){triggerToast('부대명을 입력하세요.');return;}
     if(await checkUnitNameExists()) return;
-    const unitCode=await makeUniqueUnitCode();
-    const {data,error}=await sb.from('units').insert([{unit_name:name, unit_code:unitCode}]).select('id,unit_name,unit_code').single();
+    const {data,error}=await sb.rpc('create_unit_and_join', {
+        p_unit_name: name
+    });
     if(error){triggerToast('부대 생성 실패\n'+error.message);return;}
-    const {error:updateError}=await sb.from('profiles').update({unit_id:data.id}).eq('id',currentUser.id);
-    if(updateError){triggerToast('부대 소속 설정 실패\n'+updateError.message);return;}
-    currentProfile={...currentProfile, unit_id:data.id};
-    currentUnit=data;
-    document.getElementById('created-unit-code').innerText=`부대코드: ${data.unit_code}`;
+    const createdUnit=Array.isArray(data) ? data[0] : data;
+    if(!createdUnit?.id){triggerToast('생성된 부대 정보를 불러오지 못했습니다.');return;}
+    currentProfile={...currentProfile, unit_id:createdUnit.id};
+    currentUnit=createdUnit;
+    const unitData=createdUnit;
+    document.getElementById('created-unit-code').innerText=`부대코드: ${unitData.unit_code}`;
     document.getElementById('unit-created-popup').classList.remove('hidden');
     await loadData(); updateTitle(); renderUnitTab();
 }
@@ -950,6 +1025,11 @@ function renderOtherCalendar(){
         if(dow===6) dateNo.classList.add('text-blue-600');
         dayDiv.appendChild(dateNo);
         const checkStr=`${otherYear}-${String(otherMonth+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+        if(checkStr===getTodayString()){
+            dayDiv.classList.add('bg-emerald-50','ring-2','ring-inset','ring-emerald-500','rounded-lg');
+            dateNo.classList.remove('text-red-500','text-blue-600');
+            dateNo.classList.add('text-emerald-700','font-black');
+        }
         const todays=otherOutData.filter(item=>checkStr>=item.start && checkStr<=item.end).sort((a,b)=>(slotMap.get(a.id)||0)-(slotMap.get(b.id)||0));
         let currentSlot=0;
         todays.forEach(item=>{
@@ -1012,6 +1092,10 @@ function renderOtherWeekly(next=false){
     data.forEach(item=>list.appendChild(renderOtherCard(item)));
 }
 
+document.addEventListener('click', closeRateSummary);
+window.addEventListener('scroll', closeRateSummary, true);
+window.addEventListener('resize', closeRateSummary);
+
 function openSettingsModal(){document.getElementById('settings-modal').classList.remove('hidden');}
 function closeSettingsModal(){document.getElementById('settings-modal').classList.add('hidden');}
 function showConfirmToast(message, confirmText='확인', cancelText='취소'){
@@ -1035,7 +1119,6 @@ function openProfileEditModal(){
     const isAdmin = currentProfile?.role === 'admin';
     document.getElementById('profile-edit-name').value = currentProfile?.name || currentProfile?.display_name || '';
     document.getElementById('profile-edit-phone').value = currentProfile?.phone || '';
-    document.getElementById('profile-edit-email').value = currentUser?.email || '';
     document.getElementById('profile-edit-password').value = '';
     const positionWrap = document.getElementById('profile-edit-position-wrap');
     if(positionWrap){
@@ -1060,20 +1143,19 @@ async function saveProfileEdit(){
     }
     const name=document.getElementById('profile-edit-name').value.trim();
     const phone=document.getElementById('profile-edit-phone').value.trim();
-    const email=document.getElementById('profile-edit-email').value.trim();
     const password=document.getElementById('profile-edit-password').value;
     const isAdmin=currentProfile?.role==='admin';
     const positionEl=document.getElementById('profile-edit-position');
     const position=isAdmin && positionEl ? positionEl.value.trim() : '';
-    if(!name || !phone || !email || !password){
-        triggerToast('이름, 휴대폰번호, 이메일, 비밀번호를 모두 입력해주세요.');
+    if(!name || !phone || !password){
+        triggerToast('이름, 휴대폰번호, 비밀번호를 모두 입력해주세요.');
         return;
     }
     if(isAdmin && !position){
         triggerToast('직책을 입력해주세요.');
         return;
     }
-    const loginEmail=currentUser.email || email;
+    const loginEmail=currentUser.email;
     const {error:verifyError}=await sb.auth.signInWithPassword({email:loginEmail,password});
     if(verifyError){
         triggerToast('비밀번호가 일치하지 않습니다.');
@@ -1090,10 +1172,9 @@ async function saveProfileEdit(){
         return;
     }
     const authUpdate={data:{display_name:name, phone}};
-    if(email !== currentUser.email) authUpdate.email=email;
     const {data:authData,error:authError}=await sb.auth.updateUser(authUpdate);
     if(authError){
-        triggerToast('프로필은 저장되었지만 이메일 수정 실패\n'+authError.message);
+        triggerToast('프로필 정보 저장 중 오류가 발생했습니다.\n'+authError.message);
         currentProfile={...currentProfile,...profileUpdates, ...(isAdmin?{position}: {})};
         currentUserName = typeof getCurrentUserName === 'function' ? getCurrentUserName() : name;
         return;
@@ -1102,7 +1183,7 @@ async function saveProfileEdit(){
     currentProfile={...currentProfile,...profileUpdates, ...(isAdmin?{position}: {})};
     currentUserName = typeof getCurrentUserName === 'function' ? getCurrentUserName() : name;
     closeProfileEditModal();
-    triggerToast(email !== loginEmail ? '개인정보가 저장되었습니다.\n이메일 확인이 필요할 수 있습니다.' : '개인정보가 저장되었습니다.');
+    triggerToast('개인정보가 저장되었습니다.');
     if(typeof updateTitle === 'function') updateTitle();
     if(typeof renderActiveView === 'function') renderActiveView();
     if(typeof renderCurrentTab === 'function') renderCurrentTab();
@@ -1128,7 +1209,7 @@ function openHelpModal(){
         <div><h4 class="font-black mb-1">출타 등록</h4><p>출타 형태를 선택하고 행선지, 시작일, 종료일을 입력해 출타를 등록합니다. 평일외출과 주말외출은 하루 일정으로, 외박은 1박 2일로 자동 설정됩니다.</p></div>
         <div><h4 class="font-black mb-1">달력/상세/이번주/다음주</h4><p>달력은 월간 출타 현황을 보여주고, 상세는 오늘 출타와 현재 진행 중인 출타를 보여줍니다. 이번주와 다음주 탭에서는 주간 예정 출타를 빠르게 확인합니다.</p></div>
         <div><h4 class="font-black mb-1">주 행선지</h4><p>설정에서 출타 종류별 주 행선지를 저장하면, 출타 형태를 선택할 때 해당 행선지가 먼저 자동 입력됩니다. 등록 전 자유롭게 수정할 수 있습니다.</p></div>
-        <div><h4 class="font-black mb-1">개인정보 수정</h4><p>이름, 휴대폰번호, 이메일을 수정할 수 있습니다. 보안을 위해 저장 시 현재 비밀번호를 다시 입력해야 합니다.</p></div>
+        <div><h4 class="font-black mb-1">개인정보 수정</h4><p>이름과 휴대폰번호를 수정할 수 있습니다. 보안을 위해 저장 시 현재 비밀번호를 다시 입력해야 합니다.</p></div>
     `;
     document.getElementById('help-modal').classList.remove('hidden');
 }

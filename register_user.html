@@ -224,14 +224,9 @@ async function prepareReapplyMode(){
 }
 
 async function submitReapply(){
-    const {error}=await sb
-        .from("profiles")
-        .update({
-            unit_id:selectedUnitId,
-            user_approved:false,
-            approval_status:"pending"
-        })
-        .eq("id",sessionUser.id);
+    const {error}=await sb.rpc('reapply_user_application', {
+        p_unit_id: selectedUnitId
+    });
 
     if(error){
         triggerToast("재신청 실패\n"+error.message);
@@ -362,18 +357,13 @@ registerBtn.addEventListener("click",async()=>{
             return;
         }
 
-        const {error:updateError}=await sb
-            .from("profiles")
-            .update({
-                name:nameInput.value.trim(),
-                unit_id:selectedUnitId,
-                phone:phoneNumber,
-                enlist_date:enlistDate.value,
-                discharge_date:dischargeDate.value,
-                user_approved:false,
-                approval_status:"pending"
-            })
-            .eq("id",data.user.id);
+        const {error:updateError}=await sb.rpc('submit_user_application', {
+            p_unit_id: selectedUnitId,
+            p_name: nameInput.value.trim(),
+            p_phone: phoneNumber,
+            p_enlist_date: enlistDate.value,
+            p_discharge_date: dischargeDate.value
+        });
 
         if(updateError){
             triggerToast("회원정보 저장 실패\n"+updateError.message);

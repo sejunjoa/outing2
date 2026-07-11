@@ -27,7 +27,7 @@
             height: 14px;
             font-size: 10px;
             color: white !important;
-            font-weight: 800;
+            font-weight: 600;
             text-align: center;
             line-height: 14px; 
             overflow: hidden;
@@ -105,20 +105,20 @@
                     <input type="text" id="search-input" oninput="filterData()" placeholder="출타자 이름 검색..." 
                            class="w-full p-2 mb-3 border border-gray-200 rounded-lg text-sm">
 
-                    <div id="filter-container" class="flex flex-wrap gap-x-2 gap-y-2 text-xs font-bold text-gray-500 px-1">
-                        <button onclick="toggleFilter('weekday', this)" class="filter-btn active flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-lg transition-all duration-200 border border-blue-200">
+                    <div id="filter-container" class="flex flex-nowrap items-center gap-1 text-[10px] font-bold text-gray-500 w-full">
+                        <button onclick="toggleFilter('weekday', this)" class="filter-btn active flex items-center gap-1 bg-blue-100 text-blue-800 px-1.5 py-1 rounded-lg transition-all duration-200 border border-blue-200 whitespace-nowrap shrink-0">
                             <span class="w-2 h-2 rounded-full color-weekday"></span>평일외출
                         </button>
-                        <button onclick="toggleFilter('weekend', this)" class="filter-btn active flex items-center gap-1 bg-indigo-100 text-indigo-900 px-2 py-1 rounded-lg transition-all duration-200 border border-indigo-200">
+                        <button onclick="toggleFilter('weekend', this)" class="filter-btn active flex items-center gap-1 bg-indigo-100 text-indigo-900 px-1.5 py-1 rounded-lg transition-all duration-200 border border-indigo-200 whitespace-nowrap shrink-0">
                             <span class="w-2 h-2 rounded-full color-weekend"></span>주말외출
                         </button>
-                        <button onclick="toggleFilter('overnight', this)" class="filter-btn active flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2 py-1 rounded-lg transition-all duration-200 border border-emerald-200">
+                        <button onclick="toggleFilter('overnight', this)" class="filter-btn active flex items-center gap-1 bg-emerald-100 text-emerald-800 px-1.5 py-1 rounded-lg transition-all duration-200 border border-emerald-200 whitespace-nowrap shrink-0">
                             <span class="w-2 h-2 rounded-full color-overnight"></span>외박
                         </button>
-                        <button onclick="toggleFilter('vacation', this)" class="filter-btn active flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-lg transition-all duration-200 border border-red-200">
+                        <button onclick="toggleFilter('vacation', this)" class="filter-btn active flex items-center gap-1 bg-red-100 text-red-800 px-1.5 py-1 rounded-lg transition-all duration-200 border border-red-200 whitespace-nowrap shrink-0">
                             <span class="w-2 h-2 rounded-full color-vacation"></span>휴가
                         </button>
-                        <button id="btn-date-filter" onclick="showDateFilterModal()" class="bg-gray-100 px-3 py-1 rounded-lg text-gray-700 border border-gray-200 transition-all">
+                        <button id="btn-date-filter" onclick="showDateFilterModal()" class="bg-gray-100 w-[78px] h-[26px] px-1 py-1 rounded-lg text-gray-700 border border-gray-200 transition-all text-[9px] leading-tight whitespace-nowrap overflow-hidden shrink-0">
                             기간 설정
                         </button>
                     </div>
@@ -254,43 +254,43 @@
         </div>
     </div>
 
-    <div id="settings-modal" class="fixed inset-0 hidden flex items-center justify-center z-[9999] bg-black/50 p-4">
-        <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm">
+    <div id="settings-modal" class="fixed inset-0 hidden flex items-start sm:items-center justify-center z-[9999] bg-black/50 p-2 sm:p-4 overflow-y-auto overscroll-contain">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-xl w-full max-w-sm my-2 sm:my-auto max-h-[calc(100dvh-16px)] sm:max-h-[88vh] overflow-y-auto overscroll-contain">
             <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
                 <h3 class="text-lg font-bold text-gray-900">설정</h3>
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
             </div>
 
-            <div class="space-y-4">
+            <div class="space-y-3">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">입대일</label>
-                    <input type="date" id="settings-enlist-date" onchange="saveProfileSettings()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                    <input type="date" id="settings-enlist-date" onchange="saveProfileSettings()" class="w-full px-3 py-1.5 sm:py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">전역일</label>
-                    <input type="date" id="settings-discharge-date" onchange="saveProfileSettings()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                    <input type="date" id="settings-discharge-date" onchange="saveProfileSettings()" class="w-full px-3 py-1.5 sm:py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">출타별 주 행선지</label>
-                    <div class="grid grid-cols-1 gap-2">
-                        <input type="text" id="settings-weekday-destination" oninput="handleSettingsInput()" placeholder="평일외출 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                        <input type="text" id="settings-weekend-destination" oninput="handleSettingsInput()" placeholder="주말외출 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                        <input type="text" id="settings-overnight-destination" oninput="handleSettingsInput()" placeholder="외박 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                        <input type="text" id="settings-vacation-destination" oninput="handleSettingsInput()" placeholder="휴가 주 행선지" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="settings-weekday-destination" oninput="handleSettingsInput()" placeholder="평일외출 주 행선지" class="w-full px-3 py-1.5 sm:py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                        <input type="text" id="settings-weekend-destination" oninput="handleSettingsInput()" placeholder="주말외출 주 행선지" class="w-full px-3 py-1.5 sm:py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                        <input type="text" id="settings-overnight-destination" oninput="handleSettingsInput()" placeholder="외박 주 행선지" class="w-full px-3 py-1.5 sm:py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
+                        <input type="text" id="settings-vacation-destination" oninput="handleSettingsInput()" placeholder="휴가 주 행선지" class="w-full px-3 py-1.5 sm:py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
                     </div>
                     <p class="text-[11px] text-gray-400 mt-1 text-center">출타 형태를 선택하면 해당 형태의 주 행선지가 먼저 입력됩니다.</p>
                 </div>
 
                 <p id="settings-save-status" class="text-xs text-emerald-600 min-h-[16px]"></p>
 
-                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
-                    <button onclick="openProfileEditModal()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
-                    <button onclick="openUnitTransferModal()" class="w-full py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-sm active:scale-95 transition-all">부대이동</button>
-                    <button onclick="openHelpModal()" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
-                    <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
-                    <button onclick="handleDeleteAccount()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all col-span-2">회원탈퇴</button>
+                <div class="grid grid-cols-2 gap-1.5 sm:gap-2 pt-2 sm:pt-3 border-t border-gray-100">
+                    <button onclick="openProfileEditModal()" class="w-full py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
+                    <button onclick="openUnitTransferModal()" class="w-full py-2 sm:py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-sm active:scale-95 transition-all">부대이동</button>
+                    <button onclick="openHelpModal()" class="w-full py-2 sm:py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
+                    <button onclick="handleLogout()" class="w-full py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
+                    <button onclick="handleDeleteAccount()" class="w-full py-2 sm:py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all col-span-2">회원탈퇴</button>
                 </div>
 
                 <div class="pt-3 border-t border-gray-100 text-center text-[11px] text-gray-400 leading-relaxed">
@@ -298,7 +298,7 @@
                 </div>
             </div>
 
-            <button onclick="closeSettingsModal()" class="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+            <button onclick="closeSettingsModal()" class="w-full mt-3 sm:mt-5 py-2.5 sm:py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
         </div>
     </div>
 
@@ -326,11 +326,7 @@
                 <label class="block text-xs font-bold text-gray-500 mb-1">휴대폰번호</label>
                 <input id="profile-edit-phone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600" placeholder="01012345678">
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1">이메일</label>
-                <input id="profile-edit-email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
-                <p class="text-[11px] text-gray-400 mt-1 leading-relaxed">이메일을 변경하면 Supabase 설정에 따라 새 이메일 확인이 필요할 수 있습니다.</p>
-            </div>
+
             <div class="pt-2 border-t border-gray-100">
                 <label class="block text-xs font-bold text-red-500 mb-1">현재 비밀번호 확인</label>
                 <input id="profile-edit-password" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-red-400" placeholder="정보 수정을 위해 입력">
@@ -827,31 +823,9 @@
             const ok=await showConfirmToast(`${toUnitName || '선택한 부대'}로\n부대이동을 신청하시겠습니까?`, '신청', '취소');
             if(!ok) return;
 
-            const {data:existing,error:existingError}=await sb
-                .from('unit_transfer_requests')
-                .select('id,status,to_unit_id')
-                .eq('user_id', currentUser.id)
-                .eq('status', 'pending')
-                .limit(1);
-            if(existingError){
-                console.error(existingError);
-                triggerToast('이동 신청 확인 실패\n' + existingError.message);
-                return;
-            }
-            if((existing||[]).length>0){
-                triggerToast('이미 처리 대기 중인\n부대이동 신청이 있습니다.');
-                return;
-            }
-
-            const {error}=await sb.from('unit_transfer_requests').insert([{
-                user_id: currentUser.id,
-                from_unit_id: currentProfile.unit_id,
-                to_unit_id: toUnitId,
-                requester_name: currentProfile?.name || currentUserName || currentUser?.user_metadata?.display_name || '',
-                requester_phone: currentProfile?.phone || currentUser?.user_metadata?.phone || '',
-                requester_email: currentUser?.email || '',
-                status: 'pending'
-            }]);
+            const {error}=await sb.rpc('request_unit_transfer', {
+                p_to_unit_id: toUnitId
+            });
             if(error){
                 console.error(error);
                 triggerToast('부대이동 신청 실패\n' + error.message);
@@ -907,7 +881,6 @@ function openProfileEditModal(){
     const isAdmin = currentProfile?.role === 'admin';
     document.getElementById('profile-edit-name').value = currentProfile?.name || currentProfile?.display_name || '';
     document.getElementById('profile-edit-phone').value = currentProfile?.phone || '';
-    document.getElementById('profile-edit-email').value = currentUser?.email || '';
     document.getElementById('profile-edit-password').value = '';
     const positionWrap = document.getElementById('profile-edit-position-wrap');
     if(positionWrap){
@@ -932,20 +905,19 @@ async function saveProfileEdit(){
     }
     const name=document.getElementById('profile-edit-name').value.trim();
     const phone=document.getElementById('profile-edit-phone').value.trim();
-    const email=document.getElementById('profile-edit-email').value.trim();
     const password=document.getElementById('profile-edit-password').value;
     const isAdmin=currentProfile?.role==='admin';
     const positionEl=document.getElementById('profile-edit-position');
     const position=isAdmin && positionEl ? positionEl.value.trim() : '';
-    if(!name || !phone || !email || !password){
-        triggerToast('이름, 휴대폰번호, 이메일, 비밀번호를 모두 입력해주세요.');
+    if(!name || !phone || !password){
+        triggerToast('이름, 휴대폰번호, 비밀번호를 모두 입력해주세요.');
         return;
     }
     if(isAdmin && !position){
         triggerToast('직책을 입력해주세요.');
         return;
     }
-    const loginEmail=currentUser.email || email;
+    const loginEmail=currentUser.email;
     const {error:verifyError}=await sb.auth.signInWithPassword({email:loginEmail,password});
     if(verifyError){
         triggerToast('비밀번호가 일치하지 않습니다.');
@@ -962,10 +934,9 @@ async function saveProfileEdit(){
         return;
     }
     const authUpdate={data:{display_name:name, phone}};
-    if(email !== currentUser.email) authUpdate.email=email;
     const {data:authData,error:authError}=await sb.auth.updateUser(authUpdate);
     if(authError){
-        triggerToast('프로필은 저장되었지만 이메일 수정 실패\n'+authError.message);
+        triggerToast('프로필 정보 저장 중 오류가 발생했습니다.\n'+authError.message);
         currentProfile={...currentProfile,...profileUpdates, ...(isAdmin?{position}: {})};
         currentUserName = typeof getCurrentUserName === 'function' ? getCurrentUserName() : name;
         return;
@@ -974,7 +945,7 @@ async function saveProfileEdit(){
     currentProfile={...currentProfile,...profileUpdates, ...(isAdmin?{position}: {})};
     currentUserName = typeof getCurrentUserName === 'function' ? getCurrentUserName() : name;
     closeProfileEditModal();
-    triggerToast(email !== loginEmail ? '개인정보가 저장되었습니다.\n이메일 확인이 필요할 수 있습니다.' : '개인정보가 저장되었습니다.');
+    triggerToast('개인정보가 저장되었습니다.');
     if(typeof updateTitle === 'function') updateTitle();
     if(typeof renderActiveView === 'function') renderActiveView();
     if(typeof renderCurrentTab === 'function') renderCurrentTab();
@@ -1436,6 +1407,11 @@ async function handleLogout(){
                 dayDiv.appendChild(dateNo);
 
                 const checkStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                if (checkStr === getTodayString()) {
+                    dayDiv.classList.add('bg-emerald-50', 'ring-2', 'ring-inset', 'ring-emerald-500', 'rounded-lg');
+                    dateNo.classList.remove('text-red-500', 'text-blue-600');
+                    dateNo.classList.add('text-emerald-700', 'font-black');
+                }
                 const todaysOutings = filteredData.filter(item => checkStr >= item.start && checkStr <= item.end);
 
                 let currentSlot = 0;
