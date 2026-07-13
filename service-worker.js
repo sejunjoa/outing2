@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outing-app-v1.2.1';
+const CACHE_NAME = 'outing-app-v2.4.5';
 
 const APP_SHELL = [
   './',
