@@ -2280,6 +2280,17 @@ function urlBase64ToUint8Array(base64String){
     return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
 }
 
+function applicationServerKeyMatches(subscription, vapidPublicKey){
+    const currentKey = subscription?.options?.applicationServerKey;
+    if(!currentKey) return false;
+
+    const expectedKey = urlBase64ToUint8Array(vapidPublicKey);
+    const actualKey = new Uint8Array(currentKey);
+
+    if(actualKey.length !== expectedKey.length) return false;
+    return actualKey.every((value, index) => value === expectedKey[index]);
+}
+
 function renderAdminNotificationSwitch(enabled, statusText = ''){
     const switchButton = document.getElementById('admin-notification-switch');
     const knob = document.getElementById('admin-notification-switch-knob');
@@ -2355,7 +2366,7 @@ async function savePushSubscription(subscription, enabled){
             auth_key: keys.auth_key,
             is_enabled: enabled
         }, {
-            onConflict: 'endpoint'
+            onConflict: 'user_id'
         });
 
     if(error) throw error;
@@ -2457,10 +2468,21 @@ async function enableAdminNotifications(){
     const { registration, subscription: existingSubscription } =
         await getCurrentPushSubscription();
 
-    const subscription = existingSubscription || await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-    });
+    let subscription = existingSubscription;
+
+    // 기존 구독이 다른 VAPID 공개키로 만들어졌다면 서버의 개인키와 맞지 않아
+    // 큐 행은 쌓여도 실제 Web Push 전송이 실패한다. 이 경우 구독을 새로 만든다.
+    if(subscription && !applicationServerKeyMatches(subscription, VAPID_PUBLIC_KEY)){
+        await subscription.unsubscribe();
+        subscription = null;
+    }
+
+    if(!subscription){
+        subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+    }
 
     await savePushSubscription(subscription, true);
 
