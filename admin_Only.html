@@ -263,7 +263,7 @@
                 <div class="flex items-center justify-between gap-4 p-3.5 bg-orange-50 border border-orange-100 rounded-2xl">
                     <div class="min-w-0">
                         <p class="text-sm font-black text-gray-800">관리자 알림</p>
-                        <p id="admin-notification-status" class="mt-0.5 text-[11px] font-bold text-gray-400">알림 기능 연결 전</p>
+                        <p id="admin-notification-status" class="mt-0.5 text-[11px] font-bold text-gray-400">알림 상태 확인 중</p>
                     </div>
                     <button
                         id="admin-notification-switch"
@@ -2267,9 +2267,20 @@ window.addEventListener('resize', closeRateSummary);
 
 
 
+
 const ADMIN_NOTIFICATION_UI_KEY = 'adminNotificationUiEnabled';
 
-function renderAdminNotificationSwitch(enabled){
+function urlBase64ToUint8Array(base64String){
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
+function renderAdminNotificationSwitch(enabled, statusText = ''){
     const switchButton = document.getElementById('admin-notification-switch');
     const knob = document.getElementById('admin-notification-switch-knob');
     const status = document.getElementById('admin-notification-status');
@@ -2279,25 +2290,223 @@ function renderAdminNotificationSwitch(enabled){
     switchButton.classList.toggle('bg-[#F28C28]', enabled);
     switchButton.classList.toggle('bg-gray-300', !enabled);
     knob.classList.toggle('translate-x-5', enabled);
-    status.textContent = enabled ? '켜짐 · 푸시 서버 연결 전' : '꺼짐 · 푸시 서버 연결 전';
+
+    status.textContent = statusText || (enabled ? '알림 켜짐' : '알림 꺼짐');
     status.classList.toggle('text-[#F28C28]', enabled);
     status.classList.toggle('text-gray-400', !enabled);
 }
 
-function syncAdminNotificationSwitch(){
-    renderAdminNotificationSwitch(localStorage.getItem(ADMIN_NOTIFICATION_UI_KEY) === '1');
+function setAdminNotificationSwitchBusy(isBusy){
+    const switchButton = document.getElementById('admin-notification-switch');
+    if(!switchButton) return;
+
+    switchButton.disabled = isBusy;
+    switchButton.classList.toggle('opacity-50', isBusy);
+    switchButton.classList.toggle('cursor-wait', isBusy);
 }
 
-function toggleAdminNotificationSwitch(){
-    const enabled = localStorage.getItem(ADMIN_NOTIFICATION_UI_KEY) !== '1';
-    localStorage.setItem(ADMIN_NOTIFICATION_UI_KEY, enabled ? '1' : '0');
-    renderAdminNotificationSwitch(enabled);
-    triggerToast(
-        enabled
-            ? '알림 스위치를 켰습니다.\n아직 푸시 서버와 연결되지는 않았습니다.'
-            : '알림 스위치를 껐습니다.'
-    );
+async function getPushServiceWorkerRegistration(){
+    if(!('serviceWorker' in navigator)){
+        throw new Error('이 브라우저는 서비스 워커를 지원하지 않습니다.');
+    }
+
+    await navigator.serviceWorker.register('./service-worker.js');
+    return await navigator.serviceWorker.ready;
 }
+
+async function getCurrentPushSubscription(){
+    const registration = await getPushServiceWorkerRegistration();
+    const subscription = await registration.pushManager.getSubscription();
+    return { registration, subscription };
+}
+
+function getPushSubscriptionKeys(subscription){
+    const json = subscription.toJSON();
+
+    return {
+        endpoint: subscription.endpoint,
+        p256dh: json.keys?.p256dh || '',
+        auth_key: json.keys?.auth || ''
+    };
+}
+
+async function savePushSubscription(subscription, enabled){
+    if(!currentUser?.id){
+        throw new Error('로그인 정보를 확인할 수 없습니다.');
+    }
+
+    if(!currentProfile?.unit_id){
+        throw new Error('소속 부대를 먼저 설정해주세요.');
+    }
+
+    const keys = getPushSubscriptionKeys(subscription);
+
+    if(!keys.endpoint || !keys.p256dh || !keys.auth_key){
+        throw new Error('푸시 구독 키를 가져오지 못했습니다.');
+    }
+
+    const { error } = await sb
+        .from('push_subscriptions')
+        .upsert({
+            user_id: currentUser.id,
+            unit_id: currentProfile.unit_id,
+            endpoint: keys.endpoint,
+            p256dh: keys.p256dh,
+            auth_key: keys.auth_key,
+            is_enabled: enabled
+        }, {
+            onConflict: 'endpoint'
+        });
+
+    if(error) throw error;
+}
+
+async function setStoredPushSubscriptionEnabled(endpoint, enabled){
+    if(!currentUser?.id || !endpoint) return;
+
+    const { error } = await sb
+        .from('push_subscriptions')
+        .update({
+            is_enabled: enabled,
+            unit_id: currentProfile?.unit_id || null
+        })
+        .eq('user_id', currentUser.id)
+        .eq('endpoint', endpoint);
+
+    if(error) throw error;
+}
+
+async function syncAdminNotificationSwitch(){
+    if(!window.isSecureContext){
+        renderAdminNotificationSwitch(false, 'HTTPS 환경에서만 사용할 수 있습니다');
+        return;
+    }
+
+    if(
+        !('Notification' in window) ||
+        !('PushManager' in window) ||
+        !('serviceWorker' in navigator)
+    ){
+        renderAdminNotificationSwitch(false, '이 브라우저에서는 알림을 지원하지 않습니다');
+        return;
+    }
+
+    if(Notification.permission === 'denied'){
+        renderAdminNotificationSwitch(false, '브라우저 설정에서 알림 허용이 필요합니다');
+        return;
+    }
+
+    try{
+        const { subscription } = await getCurrentPushSubscription();
+
+        if(!subscription || !currentUser?.id){
+            localStorage.setItem(ADMIN_NOTIFICATION_UI_KEY, '0');
+            renderAdminNotificationSwitch(false, '알림 꺼짐');
+            return;
+        }
+
+        const { data, error } = await sb
+            .from('push_subscriptions')
+            .select('is_enabled')
+            .eq('user_id', currentUser.id)
+            .eq('endpoint', subscription.endpoint)
+            .maybeSingle();
+
+        if(error) throw error;
+
+        const enabled = data?.is_enabled === true;
+        localStorage.setItem(ADMIN_NOTIFICATION_UI_KEY, enabled ? '1' : '0');
+        renderAdminNotificationSwitch(enabled, enabled ? '알림 켜짐' : '알림 꺼짐');
+    }catch(error){
+        console.error('알림 상태 확인 실패:', error);
+        renderAdminNotificationSwitch(false, '알림 상태를 확인하지 못했습니다');
+    }
+}
+
+async function enableAdminNotifications(){
+    if(!window.isSecureContext){
+        throw new Error('HTTPS 환경에서만 알림을 사용할 수 있습니다.');
+    }
+
+    if(
+        !('Notification' in window) ||
+        !('PushManager' in window) ||
+        !('serviceWorker' in navigator)
+    ){
+        throw new Error('이 브라우저에서는 푸시 알림을 지원하지 않습니다.');
+    }
+
+    if(typeof VAPID_PUBLIC_KEY === 'undefined' || !VAPID_PUBLIC_KEY){
+        throw new Error('VAPID 공개키가 설정되지 않았습니다.');
+    }
+
+    let permission = Notification.permission;
+
+    if(permission === 'default'){
+        permission = await Notification.requestPermission();
+    }
+
+    if(permission !== 'granted'){
+        throw new Error(
+            permission === 'denied'
+                ? '브라우저 설정에서 알림 권한을 허용해주세요.'
+                : '알림 권한이 허용되지 않았습니다.'
+        );
+    }
+
+    const { registration, subscription: existingSubscription } =
+        await getCurrentPushSubscription();
+
+    const subscription = existingSubscription || await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+
+    await savePushSubscription(subscription, true);
+
+    localStorage.setItem(ADMIN_NOTIFICATION_UI_KEY, '1');
+    renderAdminNotificationSwitch(true, '알림 켜짐');
+}
+
+async function disableAdminNotifications(){
+    const { subscription } = await getCurrentPushSubscription();
+
+    if(subscription){
+        await setStoredPushSubscriptionEnabled(subscription.endpoint, false);
+    }
+
+    localStorage.setItem(ADMIN_NOTIFICATION_UI_KEY, '0');
+    renderAdminNotificationSwitch(false, '알림 꺼짐');
+}
+
+async function toggleAdminNotificationSwitch(){
+    const switchButton = document.getElementById('admin-notification-switch');
+    const currentlyEnabled =
+        switchButton?.getAttribute('aria-checked') === 'true';
+
+    setAdminNotificationSwitchBusy(true);
+
+    try{
+        if(currentlyEnabled){
+            await disableAdminNotifications();
+        }else{
+            await enableAdminNotifications();
+        }
+    }catch(error){
+        console.error('관리자 알림 설정 실패:', error);
+        await syncAdminNotificationSwitch();
+
+        const status = document.getElementById('admin-notification-status');
+        if(status){
+            status.textContent = error?.message || '알림 설정에 실패했습니다';
+            status.classList.remove('text-[#F28C28]');
+            status.classList.add('text-red-500');
+        }
+    }finally{
+        setAdminNotificationSwitchBusy(false);
+    }
+}
+
 function openSettingsModal(sourceElement=null){
     syncAdminNotificationSwitch();animatePopupFromSource(document.getElementById('settings-modal'),sourceElement);}
 function closeSettingsModal(){closePopupDown(document.getElementById('settings-modal'));}
