@@ -299,7 +299,24 @@
             </div>
 
             <div class="space-y-4">
-                <div class="grid grid-cols-1 gap-2 pt-1">
+                
+                <div class="flex items-center justify-between gap-4 p-3.5 bg-orange-50 border border-orange-100 rounded-2xl">
+                    <div class="min-w-0">
+                        <p class="text-sm font-black text-gray-800">관리자 알림</p>
+                        <p id="admin-notification-status" class="mt-0.5 text-[11px] font-bold text-gray-400">알림 기능 연결 전</p>
+                    </div>
+                    <button
+                        id="admin-notification-switch"
+                        type="button"
+                        role="switch"
+                        aria-checked="false"
+                        onclick="toggleAdminNotificationSwitch()"
+                        class="relative w-12 h-7 shrink-0 rounded-full bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        aria-label="관리자 알림 켜기 또는 끄기">
+                        <span id="admin-notification-switch-knob" class="absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"></span>
+                    </button>
+                </div>
+<div class="grid grid-cols-1 gap-2 pt-1">
                     <button onclick="openProfileEditModal(this)" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
                     <button onclick="openHelpModal(this)" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
                     <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
@@ -1318,7 +1335,36 @@ function showDateFilterModal(sourceElement = null) {
 
 
 
-        function openSettingsModal(sourceElement = null){
+        
+
+const ADMIN_NOTIFICATION_UI_KEY = 'adminNotificationUiEnabled';
+
+function renderAdminNotificationSwitch(enabled){
+    const switchButton = document.getElementById('admin-notification-switch');
+    const knob = document.getElementById('admin-notification-switch-knob');
+    const status = document.getElementById('admin-notification-status');
+    if(!switchButton || !knob || !status) return;
+
+    switchButton.setAttribute('aria-checked', enabled ? 'true' : 'false');
+    switchButton.classList.toggle('bg-[#F28C28]', enabled);
+    switchButton.classList.toggle('bg-gray-300', !enabled);
+    knob.classList.toggle('translate-x-5', enabled);
+    status.textContent = enabled ? '켜짐 · 푸시 서버 연결 전' : '꺼짐 · 푸시 서버 연결 전';
+    status.classList.toggle('text-[#F28C28]', enabled);
+    status.classList.toggle('text-gray-400', !enabled);
+}
+
+function syncAdminNotificationSwitch(){
+    renderAdminNotificationSwitch(localStorage.getItem(ADMIN_NOTIFICATION_UI_KEY) === '1');
+}
+
+function toggleAdminNotificationSwitch(){
+    const enabled = localStorage.getItem(ADMIN_NOTIFICATION_UI_KEY) !== '1';
+    localStorage.setItem(ADMIN_NOTIFICATION_UI_KEY, enabled ? '1' : '0');
+    renderAdminNotificationSwitch(enabled);
+}
+function openSettingsModal(sourceElement = null){
+    syncAdminNotificationSwitch();
             animatePopupFromSource(document.getElementById('settings-modal'), sourceElement);
         }
 
