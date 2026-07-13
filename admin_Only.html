@@ -47,6 +47,35 @@
         #custom-toast{
             z-index:20000!important;
         }
+
+        /* 페이지 진입 애니메이션 */
+        #page-status{
+            opacity:0;
+            transform:translateY(22px) scale(.985);
+            filter:blur(7px);
+            will-change:transform,opacity,filter;
+        }
+        #page-status.page-enter-ready{
+            animation:pageEnterReady 560ms cubic-bezier(.22,1,.36,1) forwards;
+        }
+        @keyframes pageEnterReady{
+            0%{
+                opacity:0;
+                transform:translateY(22px) scale(.985);
+                filter:blur(7px);
+            }
+            100%{
+                opacity:1;
+                transform:translateY(0) scale(1);
+                filter:blur(0);
+            }
+        }
+        @media (prefers-reduced-motion:reduce){
+            #page-status.page-enter-ready{
+                animation-duration:1ms!important;
+            }
+        }
+
 </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased relative">
@@ -55,22 +84,22 @@
     <div class="sticky top-0 z-20 bg-gray-50 shadow-sm border-b border-gray-200">
         <header class="bg-white px-4 py-3 flex items-center">
             <div class="w-24 flex justify-start">
-                <button onclick="openSettingsModal()" class="h-[30px] px-3 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs flex items-center justify-center whitespace-nowrap" aria-label="설정">설정 ⚙️</button>
+                <button onclick="openSettingsModal(this)" class="h-[30px] px-3 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs flex items-center justify-center whitespace-nowrap" aria-label="설정">설정 ⚙️</button>
             </div>
             <h2 id="page-title" class="flex-1 text-center text-lg font-bold tracking-tight truncate">관리자</h2>
             <div class="w-24 flex justify-end">
-                <button onclick="location.href='schedule_admin.html'" class="h-[30px] px-3 bg-[#F28C28] text-white font-bold rounded-xl text-xs active:scale-95 transition-all shadow-xs flex items-center justify-center whitespace-nowrap">출타 탭</button>
+                <button onclick="navigateToScheduleAdmin()" class="h-[30px] px-3 bg-[#F28C28] text-white font-bold rounded-xl text-xs active:scale-95 transition-all shadow-xs flex items-center justify-center whitespace-nowrap">출타 탭</button>
             </div>
         </header>
 
         <div class="bg-white p-3">
             <div class="max-w-md mx-auto">
                 <nav class="grid grid-cols-5 gap-1 w-full mb-3">
-                    <button id="btn-tab-rate-calendar" onclick="switchAdminTab('rate-calendar')" class="py-2 rounded-xl font-bold text-[11px] tab-active min-w-0 whitespace-nowrap">출타율 달력</button>
-                    <button id="btn-tab-rate-detail" onclick="switchAdminTab('rate-detail')" class="py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap">출타율 상세</button>
-                    <button id="btn-tab-members" onclick="switchAdminTab('members')" class="py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap">부대원 관리</button>
-                    <button id="btn-tab-unit" onclick="switchAdminTab('unit')" class="py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap">부대 수정</button>
-                    <button id="btn-tab-other-unit" onclick="switchAdminTab('other-unit')" class="py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap">타부대 조회</button>
+                    <button id="btn-tab-rate-calendar" onclick="switchAdminTabFromButton('rate-calendar', this)" class="py-2 rounded-xl font-bold text-[11px] tab-active min-w-0 whitespace-nowrap">출타율 달력</button>
+                    <button id="btn-tab-rate-detail" onclick="switchAdminTabFromButton('rate-detail', this)" class="py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap">출타율 상세</button>
+                    <button id="btn-tab-members" onclick="switchAdminTabFromButton('members', this)" class="py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap">부대원 관리</button>
+                    <button id="btn-tab-unit" onclick="switchAdminTabFromButton('unit', this)" class="py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap">부대 수정</button>
+                    <button id="btn-tab-other-unit" onclick="switchAdminTabFromButton('other-unit', this)" class="py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap">타부대 조회</button>
                 </nav>
 
                 <div id="rate-mode-filter" class="flex flex-wrap gap-x-2 gap-y-2 text-xs font-bold text-gray-500 px-1">
@@ -134,7 +163,7 @@
                 </div>
 
                 <div class="card p-4">
-                    <button onclick="toggleCreateUnitBox()" class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-orange-50 active:scale-95 transition-all">
+                    <button onclick="toggleCreateUnitBox(this)" class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-orange-50 active:scale-95 transition-all">
                         <span class="w-8 h-8 rounded-full bg-[#F28C28] text-white flex items-center justify-center text-2xl font-black leading-none">+</span>
                         <span class="font-black text-[#F28C28]">부대 생성하기</span>
                     </button>
@@ -154,7 +183,7 @@
                 <div class="card p-4">
                     <h3 class="font-bold text-sm mb-2 text-red-600">부대 삭제 신청</h3>
                     <p class="text-xs text-gray-500 leading-relaxed mb-3">삭제 신청 후 개발자가 확인하여 직접 삭제합니다.</p>
-                    <button onclick="requestUnitDelete()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm">삭제 신청</button>
+                    <button onclick="requestUnitDelete(this)" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm">삭제 신청</button>
                 </div>
             </section>
 
@@ -162,8 +191,13 @@
                 <div class="card p-4">
                     <h3 class="font-bold text-sm mb-2 text-[#F28C28]">타부대 출타 조회</h3>
                     <p class="text-xs text-gray-500 leading-relaxed mb-3">부대명 또는 부대코드로 검색해 다른 부대의 출타 현황을 조회합니다.</p>
-                    <input id="other-unit-search" oninput="handleOtherUnitSearchInput()" type="text" placeholder="부대명 또는 부대코드 검색" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-[#F28C28]">
-                    <div id="other-unit-list" class="mt-3 space-y-2"></div>
+                    <input id="other-unit-search" onfocus="openOtherUnitResults(this)" onblur="handleOtherUnitSearchBlur()" oninput="handleOtherUnitSearchInput()" type="text" placeholder="부대명 또는 부대코드 검색" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-[#F28C28]">
+                    <div id="favorite-other-unit-wrap" class="mt-3">
+                        <p class="text-xs font-bold text-gray-500 mb-2">즐겨찾기한 부대</p>
+                        <div id="favorite-other-unit-list" class="space-y-2"></div>
+                    </div>
+                    <div id="other-unit-search-result-title" class="hidden mt-4 mb-2 text-xs font-bold text-gray-500">검색 결과</div>
+                    <div id="other-unit-list" class="space-y-2 hidden overflow-visible"></div>
                 </div>
 
                 <div id="other-unit-view-box" class="hidden">
@@ -174,10 +208,10 @@
                     </div>
 
                     <nav class="flex gap-1 w-full mb-3">
-                        <button id="btn-other-calendar" onclick="switchOtherView('calendar')" class="py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1">달력</button>
-                        <button id="btn-other-list" onclick="switchOtherView('list')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">상세</button>
-                        <button id="btn-other-weekly" onclick="switchOtherView('weekly')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">이번주</button>
-                        <button id="btn-other-next-weekly" onclick="switchOtherView('next-weekly')" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">다음주</button>
+                        <button id="btn-other-calendar" onclick="switchOtherView('calendar', this)" class="py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1">달력</button>
+                        <button id="btn-other-list" onclick="switchOtherView('list', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">상세</button>
+                        <button id="btn-other-weekly" onclick="switchOtherView('weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">이번주</button>
+                        <button id="btn-other-next-weekly" onclick="switchOtherView('next-weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">다음주</button>
                     </nav>
 
                     <section id="other-view-calendar">
@@ -219,24 +253,27 @@
 </div>
 
 <div id="settings-modal" class="fixed inset-0 hidden flex items-center justify-center z-[9999] bg-black/50 p-4">
-    <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm">
-        <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm max-h-[88vh] flex flex-col overflow-hidden">
+        <div class="flex justify-between items-center border-b border-gray-100 px-5 py-4 shrink-0">
             <h3 class="text-lg font-bold text-gray-900">설정</h3>
             <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
         </div>
-        <div class="space-y-4">
+        <div class="space-y-4 overflow-y-auto overscroll-contain px-5 py-4 flex-1 min-h-0">
             <div class="grid grid-cols-1 gap-2 pt-1">
-                <button onclick="openProfileEditModal()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
-                    <button onclick="openHelpModal()" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
-                    <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
+                <button onclick="openProfileEditModal(this)" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
+                <button onclick="openHelpModal(this)" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
+                <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
                 <button onclick="handleDeleteAccount()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all">회원탈퇴</button>
             </div>
-            <div class="pt-3 border-t border-gray-100 text-center text-[11px] text-gray-400 leading-relaxed">개발자 문의 : 010-9541-7788 김세준</div>
+            <div class="pt-3 border-t border-gray-100 text-center text-[11px] text-gray-400 leading-relaxed">
+                개발자 문의 : 010-9541-7788 김세준
+            </div>
         </div>
-        <button onclick="closeSettingsModal()" class="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+        <div class="shrink-0 border-t border-gray-100 bg-white p-4">
+            <button onclick="closeSettingsModal()" class="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+        </div>
     </div>
 </div>
-
 
 <div id="profile-edit-modal" class="fixed inset-0 hidden flex items-center justify-center z-[10000] bg-black/50 p-4">
     <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm max-h-[88vh] overflow-y-auto">
@@ -258,8 +295,8 @@
                 <input id="profile-edit-phone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600" placeholder="01012345678">
             </div>
             <div class="pt-2 border-t border-gray-100">
-                <label class="block text-xs font-bold text-red-500 mb-1">현재 비밀번호 확인</label>
-                <input id="profile-edit-password" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-red-400" placeholder="정보 수정을 위해 입력">
+                <label class="block text-xs font-bold text-red-500 mb-1">현재 비밀번호 입력</label>
+                <input id="profile-edit-password" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-red-400" placeholder="">
             </div>
             <button onclick="saveProfileEdit()" class="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-all">수정 저장</button>
             <button onclick="closeProfileEditModal()" class="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">취소</button>
@@ -268,17 +305,412 @@
 </div>
 
 <div id="help-modal" class="fixed inset-0 hidden flex items-center justify-center z-[10000] bg-black/50 p-4">
-    <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-sm max-h-[88vh] overflow-y-auto">
-        <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm max-h-[88vh] flex flex-col overflow-hidden">
+        <div class="flex justify-between items-center border-b border-gray-100 px-5 py-4 shrink-0">
             <h3 class="text-lg font-bold text-gray-900">도움말</h3>
             <button onclick="closeHelpModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
         </div>
-        <div id="help-content" class="space-y-4 text-sm text-gray-700 leading-relaxed"></div>
-        <button onclick="closeHelpModal()" class="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+        <div id="help-content" class="space-y-4 text-sm text-gray-700 leading-relaxed overflow-y-auto overscroll-contain px-5 py-4 flex-1 min-h-0"></div>
+        <div class="shrink-0 border-t border-gray-100 bg-white p-4">
+            <button onclick="closeHelpModal()" class="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+        </div>
     </div>
 </div>
 
 <script>
+
+function initRateSummaryOutsideClose(){
+    const popover=document.getElementById('rate-summary-popover');
+    if(!popover || popover.dataset.outsideCloseReady) return;
+    popover.dataset.outsideCloseReady='1';
+
+    const closeFirst=event=>{
+        if(popover.classList.contains('hidden')) return;
+        if(event.target.closest('.sticky.top-0')) return;
+        if(event.target.closest('#rate-summary-popover')) return;
+
+        closeRateSummary();
+        event.stopPropagation();
+    };
+
+    document.addEventListener('touchstart',closeFirst,{capture:true,passive:true});
+    document.addEventListener('mousedown',closeFirst,true);
+}
+
+
+function hasOpenBlockingOverlay(){
+    if(document.getElementById('custom-confirm-toast')) return true;
+
+    const selectors=[
+        '#settings-modal',
+        '#profile-edit-modal',
+        '#help-modal',
+        '#register-modal',
+        '#date-filter-modal',
+        '#confirm-modal',
+        '#past-outing-modal',
+        '#outing-popup',
+        '#unit-created-popup',
+        '#unit-transfer-modal'
+    ];
+
+    return selectors.some(selector=>{
+        const element=document.querySelector(selector);
+        return element && !element.classList.contains('hidden');
+    });
+}
+
+
+        function playPageEnterAnimation(){
+            const page=document.getElementById('page-status');
+            if(!page) return;
+            requestAnimationFrame(()=>{
+                requestAnimationFrame(()=>{
+                    page.classList.add('page-enter-ready');
+                });
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded',playPageEnterAnimation);
+
+
+function animatePopupFromSource(modal, sourceElement){
+    if(!modal) return;
+    const panel=modal.firstElementChild;
+    modal.classList.remove('hidden');
+    modal.getAnimations().forEach(a=>a.cancel());
+    panel?.getAnimations().forEach(a=>a.cancel());
+    modal.animate([{backgroundColor:'rgb(0 0 0 / 0%)'},{backgroundColor:'rgb(0 0 0 / 50%)'}],{duration:220,easing:'ease-out',fill:'both'});
+    if(!panel || !sourceElement) return;
+    const sourceRect=sourceElement.getBoundingClientRect();
+    requestAnimationFrame(()=>{
+        const panelRect=panel.getBoundingClientRect();
+        const tx=sourceRect.left+sourceRect.width/2-(panelRect.left+panelRect.width/2);
+        const ty=sourceRect.top+sourceRect.height/2-(panelRect.top+panelRect.height/2);
+        const sx=Math.max(.08,Math.min(.34,sourceRect.width/panelRect.width));
+        const sy=Math.max(.08,Math.min(.26,sourceRect.height/panelRect.height));
+        panel.animate([
+            {transform:`translate(${tx}px,${ty}px) scale(${sx},${sy})`,opacity:.1},
+            {transform:'translate(0,0) scale(1,1)',opacity:1}
+        ],{duration:330,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});
+    });
+}
+function closePopupDown(modal, afterClose){
+    if(!modal || modal.classList.contains('hidden')){afterClose?.();return;}
+    const panel=modal.firstElementChild;
+    modal.getAnimations().forEach(a=>a.cancel());
+    panel?.getAnimations().forEach(a=>a.cancel());
+    const anim=panel?.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY(72px)',opacity:0}],{duration:230,easing:'cubic-bezier(.4,0,1,1)',fill:'both'});
+    modal.animate([{backgroundColor:'rgb(0 0 0 / 50%)'},{backgroundColor:'rgb(0 0 0 / 0%)'}],{duration:230,easing:'ease-in',fill:'both'});
+    const finish=()=>{modal.classList.add('hidden');modal.getAnimations().forEach(a=>a.cancel());panel?.getAnimations().forEach(a=>a.cancel());afterClose?.();};
+    if(anim) anim.finished.then(finish).catch(finish); else setTimeout(finish,230);
+}
+function navigateToScheduleAdmin(){
+    const page=document.getElementById('page-status');
+    if(!page){location.href='schedule_admin.html';return;}
+    page.animate([
+        {transform:'translateX(0) scale(1)',opacity:1,filter:'blur(0)'},
+        {transform:'translateX(36px) scale(.98)',opacity:0,filter:'blur(5px)'}
+    ],{duration:360,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'});
+    setTimeout(()=>location.href='schedule_admin.html',340);
+}
+const ADMIN_TAB_ORDER=['rate-calendar','rate-detail','members','unit','other-unit'];
+let adminTabAnimating=false;
+function getActiveAdminTab(){
+    const section=ADMIN_TAB_ORDER.map(x=>document.getElementById(`view-${x}`)).find(el=>el&&!el.classList.contains('hidden'));
+    return section?section.id.replace('view-',''):'rate-calendar';
+}
+function renderAdminTab(type){
+    if(type==='rate-calendar') renderRateCalendar();
+    if(type==='rate-detail') renderRateDetail();
+    if(type==='members') renderMembers();
+    if(type==='unit') renderUnitTab();
+    if(type==='other-unit'){
+        renderFavoriteOtherUnits();
+        if(selectedOtherUnit) switchOtherView(otherView);
+    }
+}
+function updateAdminTabButtons(type){
+    ADMIN_TAB_ORDER.forEach(tab=>{
+        const btn=document.getElementById(`btn-tab-${tab}`);
+        if(btn) btn.className='py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap';
+    });
+    const active=document.getElementById(`btn-tab-${type}`);
+    if(active) active.className='py-2 rounded-xl font-bold text-[11px] tab-active min-w-0 whitespace-nowrap';
+    document.getElementById('rate-mode-filter')?.classList.toggle('hidden',type!=='rate-calendar');
+}
+function switchAdminTabFromButton(type, sourceElement){
+    const from=getActiveAdminTab();
+    if(from===type || adminTabAnimating) return;
+    const fi=ADMIN_TAB_ORDER.indexOf(from), ti=ADMIN_TAB_ORDER.indexOf(type);
+    const forward=(ti-fi+ADMIN_TAB_ORDER.length)%ADMIN_TAB_ORDER.length;
+    const backward=(fi-ti+ADMIN_TAB_ORDER.length)%ADMIN_TAB_ORDER.length;
+    animateAdminTab(type, forward<=backward?1:-1);
+}
+function animateAdminTab(type,direction){
+    const current=document.getElementById(`view-${getActiveAdminTab()}`);
+    const target=document.getElementById(`view-${type}`);
+    if(!current||!target||current===target)return;
+    renderAdminTab(type);
+    const wrap=current.parentElement, cr=current.getBoundingClientRect(), wr=wrap.getBoundingClientRect(), width=Math.max(cr.width,1), gap=12;
+    const prevPos=wrap.style.position, prevOverflow=wrap.style.overflow;
+    if(getComputedStyle(wrap).position==='static')wrap.style.position='relative';
+    wrap.style.overflow='hidden';
+    current.style.position='relative';current.style.zIndex='5';current.style.pointerEvents='none';current.style.willChange='transform';current.style.transform='translate3d(0,0,0)';
+    const clone=target.cloneNode(true); clone.classList.remove('hidden'); clone.removeAttribute('id'); clone.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id'));
+    Object.assign(clone.style,{position:'absolute',left:'0',top:'0',width:`${width}px`,minWidth:`${width}px`,maxWidth:`${width}px`,margin:'0',pointerEvents:'none',transform:`translate3d(${direction*(width+gap)}px,0,0)`,willChange:'transform'});
+    const overlay=document.createElement('div');
+    Object.assign(overlay.style,{position:'absolute',left:`${cr.left-wr.left}px`,top:`${cr.top-wr.top}px`,width:`${width}px`,height:`${Math.max(cr.height,1)}px`,overflow:'hidden',pointerEvents:'none',zIndex:'5'});
+    overlay.appendChild(clone);wrap.appendChild(overlay);adminTabAnimating=true;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        current.style.transition='transform 220ms cubic-bezier(.22,.61,.36,1)';
+        clone.style.transition='transform 220ms cubic-bezier(.22,.61,.36,1)';
+        current.style.transform=`translate3d(${-direction*(width+gap)}px,0,0)`;
+        clone.style.transform='translate3d(0,0,0)';
+    }));
+    const done=()=>{
+        overlay.remove();
+        Object.assign(current.style,{position:'',zIndex:'',pointerEvents:'',willChange:'',transform:'',transition:''});
+        current.classList.add('hidden');target.classList.remove('hidden');
+        wrap.style.position=prevPos;wrap.style.overflow=prevOverflow;
+        updateAdminTabButtons(type);adminTabAnimating=false;
+    };
+    clone.addEventListener('transitionend',done,{once:true});setTimeout(done,300);
+}
+
+function initAdminTabSwipe(){
+    const area=document.querySelector('main');
+    if(!area || area.dataset.swipeReady) return;
+    area.dataset.swipeReady='1';
+
+    let startX=0,startY=0,lastX=0,lastTime=0,velocityX=0;
+    let tracking=false,axisLocked=null,dragPrepared=false;
+    let currentView=null,targetView=null,targetType='',direction=0,width=1;
+    let contentWrap=null,overlay=null,targetClone=null;
+    let previousWrapPosition='',previousWrapOverflow='';
+    const swipeGap=12;
+
+    function removeDuplicateIds(root){
+        if(root.id) root.removeAttribute('id');
+        root.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+        root.querySelectorAll('input,button,select,textarea,a').forEach(el=>el.tabIndex=-1);
+    }
+
+    function clearSwipe(showTarget){
+        overlay?.remove();
+        overlay=null;
+
+        if(currentView){
+            currentView.style.position='';
+            currentView.style.zIndex='';
+            currentView.style.transform='';
+            currentView.style.transition='';
+            currentView.style.willChange='';
+            currentView.style.pointerEvents='';
+        }
+
+        if(currentView && targetView){
+            if(showTarget){
+                currentView.classList.add('hidden');
+                targetView.classList.remove('hidden');
+                updateAdminTabButtons(targetType);
+            }else{
+                currentView.classList.remove('hidden');
+                targetView.classList.add('hidden');
+            }
+        }
+
+        if(contentWrap){
+            contentWrap.style.position=previousWrapPosition;
+            contentWrap.style.overflow=previousWrapOverflow;
+        }
+
+        adminTabAnimating=false;
+        dragPrepared=false;
+        currentView=null;
+        targetView=null;
+        targetClone=null;
+        contentWrap=null;
+    }
+
+    function prepareDrag(deltaX){
+        currentView=document.getElementById(`view-${getActiveAdminTab()}`);
+        if(!currentView) return false;
+
+        const currentType=getActiveAdminTab();
+        const currentIndex=ADMIN_TAB_ORDER.indexOf(currentType);
+        if(currentIndex<0) return false;
+
+        direction=deltaX<0?1:-1;
+        targetType=ADMIN_TAB_ORDER[(currentIndex+direction+ADMIN_TAB_ORDER.length)%ADMIN_TAB_ORDER.length];
+        targetView=document.getElementById(`view-${targetType}`);
+        if(!targetView || targetView===currentView) return false;
+
+        renderAdminTab(targetType);
+
+        contentWrap=currentView.parentElement;
+        const currentRect=currentView.getBoundingClientRect();
+        const wrapRect=contentWrap.getBoundingClientRect();
+        width=Math.max(currentRect.width,1);
+
+        previousWrapPosition=contentWrap.style.position;
+        previousWrapOverflow=contentWrap.style.overflow;
+        if(getComputedStyle(contentWrap).position==='static') contentWrap.style.position='relative';
+        contentWrap.style.overflow='hidden';
+
+        Object.assign(currentView.style,{
+            position:'relative',
+            zIndex:'5',
+            transform:'translate3d(0,0,0)',
+            transition:'none',
+            willChange:'transform',
+            pointerEvents:'none'
+        });
+
+        targetClone=targetView.cloneNode(true);
+        removeDuplicateIds(targetClone);
+        targetClone.classList.remove('hidden');
+
+        overlay=document.createElement('div');
+        overlay.setAttribute('aria-hidden','true');
+        Object.assign(overlay.style,{
+            position:'absolute',
+            left:`${currentRect.left-wrapRect.left}px`,
+            top:`${currentRect.top-wrapRect.top}px`,
+            width:`${width}px`,
+            height:`${Math.max(currentRect.height,1)}px`,
+            overflow:'hidden',
+            pointerEvents:'none',
+            zIndex:'5',
+            contain:'layout paint size'
+        });
+
+        Object.assign(targetClone.style,{
+            position:'absolute',
+            left:'0',
+            top:'0',
+            width:`${width}px`,
+            minWidth:`${width}px`,
+            maxWidth:`${width}px`,
+            margin:'0',
+            boxSizing:'border-box',
+            transition:'none',
+            willChange:'transform',
+            pointerEvents:'none',
+            transform:`translate3d(${direction*(width+swipeGap)}px,0,0)`
+        });
+
+        overlay.appendChild(targetClone);
+        contentWrap.appendChild(overlay);
+        adminTabAnimating=true;
+        dragPrepared=true;
+        return true;
+    }
+
+    function moveViews(deltaX){
+        if(!dragPrepared || !currentView || !targetClone) return;
+        const clamped=Math.max(-width,Math.min(width,deltaX));
+        currentView.style.transform=`translate3d(${clamped}px,0,0)`;
+        targetClone.style.transform=`translate3d(${direction*(width+swipeGap)+clamped}px,0,0)`;
+    }
+
+    function settleViews(complete){
+        if(!dragPrepared || !currentView || !targetClone) return;
+        const duration=complete?220:180;
+        const easing='cubic-bezier(.22,.61,.36,1)';
+
+        currentView.style.transition=`transform ${duration}ms ${easing}`;
+        targetClone.style.transition=`transform ${duration}ms ${easing}`;
+
+        requestAnimationFrame(()=>{
+            if(complete){
+                currentView.style.transform=`translate3d(${-direction*(width+swipeGap)}px,0,0)`;
+                targetClone.style.transform='translate3d(0,0,0)';
+            }else{
+                currentView.style.transform='translate3d(0,0,0)';
+                targetClone.style.transform=`translate3d(${direction*(width+swipeGap)}px,0,0)`;
+            }
+        });
+
+        let finished=false;
+        const done=()=>{
+            if(finished) return;
+            finished=true;
+            clearSwipe(complete);
+        };
+
+        targetClone.addEventListener('transitionend',done,{once:true});
+        setTimeout(done,duration+80);
+    }
+
+    area.addEventListener('touchstart',event=>{
+        if(hasOpenBlockingOverlay() || adminTabAnimating || event.touches.length!==1) return;
+        if(event.target.closest('#other-unit-view-box')) return;
+        if(event.target.closest('input,textarea,select,button,a,[contenteditable="true"]')) return;
+
+        const touch=event.touches[0];
+        startX=lastX=touch.clientX;
+        startY=touch.clientY;
+        lastTime=performance.now();
+        velocityX=0;
+        tracking=true;
+        axisLocked=null;
+        dragPrepared=false;
+    },{passive:true});
+
+    area.addEventListener('touchmove',event=>{
+        if(!tracking || event.touches.length!==1) return;
+
+        const touch=event.touches[0];
+        const deltaX=touch.clientX-startX;
+        const deltaY=touch.clientY-startY;
+        const absX=Math.abs(deltaX);
+        const absY=Math.abs(deltaY);
+
+        if(!axisLocked){
+            if(absX<8 && absY<8) return;
+            axisLocked=absX>absY*1.15?'x':'y';
+            if(axisLocked==='y'){
+                tracking=false;
+                return;
+            }
+        }
+
+        if(axisLocked!=='x') return;
+        event.preventDefault();
+
+        if(!dragPrepared && !prepareDrag(deltaX)){
+            tracking=false;
+            return;
+        }
+
+        const now=performance.now();
+        const elapsed=Math.max(now-lastTime,1);
+        velocityX=(touch.clientX-lastX)/elapsed;
+        lastX=touch.clientX;
+        lastTime=now;
+
+        moveViews(deltaX);
+    },{passive:false});
+
+    area.addEventListener('touchend',event=>{
+        if(!tracking) return;
+        tracking=false;
+        if(!dragPrepared || event.changedTouches.length!==1) return;
+
+        const deltaX=event.changedTouches[0].clientX-startX;
+        const expected=Math.sign(deltaX)===-direction;
+        const passedDistance=Math.abs(deltaX)>=width*.24;
+        const passedVelocity=Math.abs(velocityX)>=.45;
+        settleViews(expected && (passedDistance || passedVelocity));
+    },{passive:true});
+
+    area.addEventListener('touchcancel',()=>{
+        tracking=false;
+        if(dragPrepared) settleViews(false);
+    },{passive:true});
+}
+
 let currentUser=null;
 let currentProfile=null;
 let currentUnit=null;
@@ -395,19 +827,10 @@ function updateTitle(){
     document.getElementById('edit-unit-name').value=currentUnit?.unit_name || '';
 }
 function switchAdminTab(type){
-    ['rate-calendar','rate-detail','members','unit','other-unit'].forEach(tab=>{
-        const btn=document.getElementById(`btn-tab-${tab}`);
-        btn.className='py-2 rounded-xl font-bold text-[11px] bg-gray-100 text-gray-600 min-w-0 whitespace-nowrap';
-        document.getElementById(`view-${tab}`).classList.add('hidden');
-    });
-    document.getElementById(`btn-tab-${type}`).className='py-2 rounded-xl font-bold text-[11px] tab-active min-w-0 whitespace-nowrap';
-    document.getElementById(`view-${type}`).classList.remove('hidden');
-    document.getElementById('rate-mode-filter').classList.toggle('hidden', type!=='rate-calendar');
-    if(type==='rate-calendar') renderRateCalendar();
-    if(type==='rate-detail') renderRateDetail();
-    if(type==='members') renderMembers();
-    if(type==='unit') renderUnitTab();
-    if(type==='other-unit'){ searchOtherUnits(); if(selectedOtherUnit) switchOtherView(otherView); }
+    const from=getActiveAdminTab();
+    if(from===type)return;
+    const fi=ADMIN_TAB_ORDER.indexOf(from),ti=ADMIN_TAB_ORDER.indexOf(type);
+    animateAdminTab(type,ti>=fi?1:-1);
 }
 function setRateMode(mode){
     rateMode=mode;
@@ -443,6 +866,8 @@ function showRateSummary(event,dateStr){
     ];
     popover.innerHTML=rows.map(([type,label])=>`<div class="rate-summary-row"><span class="flex items-center gap-2"><span class="rate-summary-mark color-${type}"></span>${label}</span><span>: ${counts[type]}</span></div>`).join('');
     popover.classList.remove('hidden');
+    popover.getAnimations().forEach(a=>a.cancel());
+    popover.animate([{opacity:0,transform:'translateY(10px) scale(.92)'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:220,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});
 
     const width=popover.offsetWidth || 154;
     const height=popover.offsetHeight || 120;
@@ -536,8 +961,8 @@ function renderRateDetail(){
                 <div class="text-base font-black text-gray-900 leading-none mb-0.5 text-center tabular-nums">${vacationRate}</div>
             </div>
             <div class="min-w-0 flex flex-row justify-end gap-1">
-                <button onclick="showOutingPopup('${dateStr}','vacation')" class="min-w-[54px] h-10 px-2 py-2 bg-orange-50 text-[#F28C28] rounded-xl text-xs font-black border border-orange-100 flex items-center justify-center whitespace-nowrap">휴가자</button>
-                <button onclick="showOutingPopup('${dateStr}','non-vacation')" class="min-w-[76px] h-10 px-2 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-black border border-gray-200 flex items-center justify-center whitespace-nowrap">휴가 외 출타자</button>
+                <button onclick="showOutingPopup('${dateStr}','vacation', this)" class="min-w-[54px] h-10 px-2 py-2 bg-orange-50 text-[#F28C28] rounded-xl text-xs font-black border border-orange-100 flex items-center justify-center whitespace-nowrap">휴가자</button>
+                <button onclick="showOutingPopup('${dateStr}','non-vacation', this)" class="min-w-[76px] h-10 px-2 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-black border border-gray-200 flex items-center justify-center whitespace-nowrap">휴가 외 출타자</button>
             </div>`;
         list.appendChild(card);
     }
@@ -558,7 +983,7 @@ function createOutingCard(item){
         <span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color:#fff!important;">${typeNames[item.type]}</span>`;
     return div;
 }
-function showOutingPopup(dateStr, group){
+function showOutingPopup(dateStr, group, sourceElement=null){
     const title=document.getElementById('outing-popup-title');
     const list=document.getElementById('outing-popup-list');
     const isVacation=group==='vacation';
@@ -569,9 +994,9 @@ function showOutingPopup(dateStr, group){
     list.innerHTML='';
     if(items.length===0){list.innerHTML='<p class="text-center py-8 text-sm text-gray-400">해당 인원이 없습니다.</p>';}
     items.forEach(item=>list.appendChild(createOutingCard(item)));
-    document.getElementById('outing-popup').classList.remove('hidden');
+    animatePopupFromSource(document.getElementById('outing-popup'),sourceElement);
 }
-function closeOutingPopup(){document.getElementById('outing-popup').classList.add('hidden');}
+function closeOutingPopup(){closePopupDown(document.getElementById('outing-popup'));}
 
 function createMemberCard(profile, extra='', showServiceDates=false){
     const serviceDates=showServiceDates ? `
@@ -799,7 +1224,20 @@ async function joinUnit(unitId){
     subscribeRealtime();
 }
 
-function toggleCreateUnitBox(){document.getElementById('create-unit-box').classList.toggle('hidden');}
+function toggleCreateUnitBox(sourceElement=null){
+    const box=document.getElementById('create-unit-box');
+    if(!box)return;
+    const opening=box.classList.contains('hidden');
+    box.getAnimations().forEach(a=>a.cancel());
+    if(opening){
+        box.classList.remove('hidden');
+        const h=box.scrollHeight;
+        box.animate([{height:'0px',opacity:0,transform:'translateY(-10px)'},{height:`${h}px`,opacity:1,transform:'translateY(0)'}],{duration:280,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'}).finished.then(()=>{box.style.height='';});
+    }else{
+        const h=box.scrollHeight;
+        box.animate([{height:`${h}px`,opacity:1,transform:'translateY(0)'},{height:'0px',opacity:0,transform:'translateY(-10px)'}],{duration:230,easing:'cubic-bezier(.4,0,1,1)',fill:'both'}).finished.then(()=>{box.classList.add('hidden');box.style.height='';});
+    }
+}
 async function checkUnitNameExists(){
     const name=document.getElementById('new-unit-name').value.trim();
     const msg=document.getElementById('unit-exists-msg');
@@ -831,10 +1269,10 @@ async function createUnit(){
     currentUnit=createdUnit;
     const unitData=createdUnit;
     document.getElementById('created-unit-code').innerText=`부대코드: ${unitData.unit_code}`;
-    document.getElementById('unit-created-popup').classList.remove('hidden');
+    animatePopupFromSource(document.getElementById('unit-created-popup'),document.querySelector('[onclick^="toggleCreateUnitBox"]'));
     await loadData(); updateTitle(); renderUnitTab();
 }
-function closeUnitCreatedPopup(){document.getElementById('unit-created-popup').classList.add('hidden');}
+function closeUnitCreatedPopup(){closePopupDown(document.getElementById('unit-created-popup'));}
 function renderUnitTab(){
     const info=document.getElementById('current-unit-info');
     if(info){
@@ -860,9 +1298,9 @@ async function updateUnitName(){
     updateTitle();
     triggerToast('부대명이 수정되었습니다.');
 }
-async function requestUnitDelete(){
+async function requestUnitDelete(sourceElement=null){
     if(!currentUnit?.id){triggerToast('삭제 신청할 소속 부대가 없습니다.');return;}
-    const ok=await showConfirmToast('부대 삭제를 신청하시겠습니까?','신청','취소');
+    const ok=await showConfirmToast('부대 삭제를 신청하시겠습니까?','신청','취소',sourceElement);
     if(!ok) return;
     const {error}=await sb.from('unit_delete').upsert({unit_id:currentUnit.id, unit_name:currentUnit.unit_name, requested_by:currentUser.id, status:'pending'}, {onConflict:'unit_id'});
     if(error){triggerToast('삭제 신청 실패\n'+error.message);return;}
@@ -878,6 +1316,96 @@ let otherProfiles=[];
 let otherView='calendar';
 let otherYear=new Date().getFullYear();
 let otherMonth=new Date().getMonth();
+
+function renderFavoriteOtherUnits(){
+    const wrap=document.getElementById('favorite-other-unit-wrap');
+    const box=document.getElementById('favorite-other-unit-list');
+    if(!wrap || !box) return;
+
+    const favoriteIds=getOtherFavorites();
+
+    if(favoriteIds.length===0){
+        wrap.classList.remove('hidden');
+        box.innerHTML='<div class="text-center py-4 text-xs text-gray-400 bg-gray-50 rounded-xl border border-gray-100">즐겨찾기한 부대가 없습니다.</div>';
+        return;
+    }
+
+    const sourceItems=[
+        ...(otherUnits || []),
+        ...(selectedOtherUnit ? [selectedOtherUnit] : [])
+    ];
+
+    const uniqueMap=new Map();
+    sourceItems.forEach(unit=>{
+        if(unit?.id) uniqueMap.set(unit.id,unit);
+    });
+
+    const knownFavorites=favoriteIds
+        .map(id=>uniqueMap.get(id))
+        .filter(Boolean);
+
+    if(knownFavorites.length===favoriteIds.length){
+        renderFavoriteOtherUnitCards(knownFavorites);
+        return;
+    }
+
+    loadFavoriteOtherUnits();
+}
+
+async function loadFavoriteOtherUnits(){
+    const favoriteIds=getOtherFavorites();
+    const box=document.getElementById('favorite-other-unit-list');
+    const wrap=document.getElementById('favorite-other-unit-wrap');
+    if(!box || !wrap) return;
+
+    if(favoriteIds.length===0){
+        wrap.classList.remove('hidden');
+        box.innerHTML='<div class="text-center py-4 text-xs text-gray-400 bg-gray-50 rounded-xl border border-gray-100">즐겨찾기한 부대가 없습니다.</div>';
+        return;
+    }
+
+    const {data,error}=await sb
+        .from('units')
+        .select('id,unit_name,unit_code')
+        .in('id',favoriteIds);
+
+    if(error){
+        console.error(error);
+        box.innerHTML='<div class="text-center py-4 text-xs text-red-400 bg-white rounded-xl border border-red-100">즐겨찾기 부대를 불러오지 못했습니다.</div>';
+        return;
+    }
+
+    const orderMap=new Map(favoriteIds.map((id,index)=>[id,index]));
+    const items=(data || [])
+        .filter(unit=>unit.id!==currentProfile?.unit_id)
+        .sort((a,b)=>(orderMap.get(a.id) ?? 999)-(orderMap.get(b.id) ?? 999));
+
+    renderFavoriteOtherUnitCards(items);
+}
+
+function renderFavoriteOtherUnitCards(items){
+    const box=document.getElementById('favorite-other-unit-list');
+    const wrap=document.getElementById('favorite-other-unit-wrap');
+    if(!box || !wrap) return;
+
+    wrap.classList.remove('hidden');
+
+    if(!items.length){
+        box.innerHTML='<div class="text-center py-4 text-xs text-gray-400 bg-gray-50 rounded-xl border border-gray-100">즐겨찾기한 부대가 없습니다.</div>';
+        return;
+    }
+
+    box.innerHTML=items.map(unit=>`
+        <div onclick="selectOtherUnit('${unit.id}')" class="p-3 bg-yellow-50 rounded-xl border border-yellow-100 flex justify-between items-center gap-2 active:scale-[.99] transition-all cursor-pointer">
+            <div class="min-w-0">
+                <p class="font-bold text-sm text-gray-900 truncate">${escapeHtml(unit.unit_name)}</p>
+                <p class="text-xs text-[#F28C28] font-bold mt-1">부대코드: ${escapeHtml(unit.unit_code || '')}</p>
+            </div>
+            <button onclick="toggleOtherFavorite('${unit.id}', event)" class="shrink-0 w-10 h-10 rounded-xl bg-yellow-100 text-yellow-500 border border-yellow-200 text-xl font-black flex items-center justify-center" aria-label="즐겨찾기 해제">★</button>
+        </div>
+    `).join('');
+}
+
 function getOtherFavorites(){
     try{return JSON.parse(localStorage.getItem('favorite_other_units') || '[]');}
     catch(e){return [];}
@@ -886,10 +1414,15 @@ function setOtherFavorites(ids){localStorage.setItem('favorite_other_units', JSO
 function isOtherFavorite(id){return getOtherFavorites().includes(id);}
 function toggleOtherFavorite(unitId, event){
     if(event) event.stopPropagation();
+
     const favs=getOtherFavorites();
-    const next=favs.includes(unitId) ? favs.filter(id=>id!==unitId) : [unitId, ...favs];
+    const next=favs.includes(unitId)
+        ? favs.filter(id=>id!==unitId)
+        : [unitId, ...favs];
+
     setOtherFavorites(next);
     renderOtherUnitList(otherUnits);
+    renderFavoriteOtherUnits();
 }
 function sortOtherUnits(items){
     const favs=getOtherFavorites();
@@ -899,22 +1432,179 @@ function sortOtherUnits(items){
         return String(a.unit_name||'').localeCompare(String(b.unit_name||''),'ko');
     });
 }
+
+function handleOtherUnitSearchBlur(){
+    setTimeout(()=>{
+        const input=document.getElementById('other-unit-search');
+        const box=document.getElementById('other-unit-list');
+        const favoriteWrap=document.getElementById('favorite-other-unit-wrap');
+        const resultTitle=document.getElementById('other-unit-search-result-title');
+        if(!input || !box) return;
+
+        if(document.activeElement===input) return;
+
+        box.getAnimations().forEach(a=>a.cancel());
+
+        const currentHeight=Math.max(box.scrollHeight,1);
+        const animation=box.animate([
+            {maxHeight:`${currentHeight}px`,opacity:1,transform:'translateY(0)'},
+            {maxHeight:'0px',opacity:0,transform:'translateY(-8px)'}
+        ],{
+            duration:220,
+            easing:'cubic-bezier(.4,0,1,1)',
+            fill:'both'
+        });
+
+        animation.finished.then(()=>{
+            box.classList.add('hidden');
+            box.innerHTML='';
+            box.style.height='';
+            box.style.maxHeight='';
+            box.style.overflow='';
+            resultTitle?.classList.add('hidden');
+            input.value='';
+            favoriteWrap?.classList.remove('hidden');
+            renderFavoriteOtherUnits();
+        }).catch(()=>{});
+    },160);
+}
+
+function openOtherUnitResults(sourceElement){
+    const box=document.getElementById('other-unit-list');
+    const input=document.getElementById('other-unit-search');
+    const favoriteWrap=document.getElementById('favorite-other-unit-wrap');
+    const resultTitle=document.getElementById('other-unit-search-result-title');
+    if(!box || !input) return;
+
+    favoriteWrap?.classList.remove('hidden');
+
+    const q=input.value.trim();
+
+    if(!q){
+        box.innerHTML='';
+        box.classList.add('hidden');
+        resultTitle?.classList.add('hidden');
+        box.style.height='';
+        box.style.maxHeight='';
+        return;
+    }
+
+    resultTitle?.classList.remove('hidden');
+    box.classList.remove('hidden');
+    box.style.height='auto';
+    box.style.maxHeight='none';
+    box.style.overflow='visible';
+    box.getAnimations().forEach(a=>a.cancel());
+
+    searchOtherUnits().then(()=>{
+        requestAnimationFrame(()=>{
+            const targetHeight=Math.max(box.scrollHeight,80);
+            box.animate([
+                {maxHeight:'0px',opacity:0,transform:'translateY(-8px)'},
+                {maxHeight:`${targetHeight}px`,opacity:1,transform:'translateY(0)'}
+            ],{
+                duration:280,
+                easing:'cubic-bezier(.22,1,.36,1)',
+                fill:'both'
+            }).finished.then(()=>{
+                box.style.maxHeight='none';
+                box.style.height='auto';
+                box.style.overflow='visible';
+            }).catch(()=>{});
+        });
+    });
+}
 function handleOtherUnitSearchInput(){
+    const input=document.getElementById('other-unit-search');
+    const box=document.getElementById('other-unit-list');
+    const favoriteWrap=document.getElementById('favorite-other-unit-wrap');
+    const resultTitle=document.getElementById('other-unit-search-result-title');
+    if(!input || !box) return;
+
+    const q=input.value.trim();
     clearTimeout(otherUnitSearchTimer);
-    otherUnitSearchTimer=setTimeout(searchOtherUnits,250);
+
+    favoriteWrap?.classList.remove('hidden');
+
+    if(!q){
+        otherUnits=[];
+        box.innerHTML='';
+        box.classList.add('hidden');
+        resultTitle?.classList.add('hidden');
+        box.style.height='';
+        box.style.maxHeight='';
+        box.style.overflow='';
+        return;
+    }
+
+    resultTitle?.classList.remove('hidden');
+    box.classList.remove('hidden');
+    box.style.height='auto';
+    box.style.maxHeight='none';
+    box.style.overflow='visible';
+
+    otherUnitSearchTimer=setTimeout(async()=>{
+        await searchOtherUnits();
+
+        requestAnimationFrame(()=>{
+            const fullHeight=Math.max(box.scrollHeight,80);
+            box.getAnimations().forEach(a=>a.cancel());
+            box.animate([
+                {maxHeight:'0px',opacity:.25,transform:'translateY(-6px)'},
+                {maxHeight:`${fullHeight}px`,opacity:1,transform:'translateY(0)'}
+            ],{
+                duration:280,
+                easing:'cubic-bezier(.22,1,.36,1)',
+                fill:'both'
+            }).finished.then(()=>{
+                box.style.maxHeight='none';
+                box.style.height='auto';
+                box.style.overflow='visible';
+            }).catch(()=>{});
+        });
+    },250);
 }
 async function searchOtherUnits(){
     const q=(document.getElementById('other-unit-search')?.value || '').trim();
-    let query=sb.from('units').select('id,unit_name,unit_code').order('unit_name').limit(50);
-    if(q){
-        query=query.or(`unit_name.ilike.%${q}%,unit_code.ilike.%${q}%`);
-    }
-    const {data,error}=await query;
-    if(error){
-        console.error(error);
-        document.getElementById('other-unit-list').innerHTML='<div class="text-center py-4 text-xs text-red-400 bg-white rounded-xl border border-red-100">부대 목록을 불러오지 못했습니다.</div>';
+    const box=document.getElementById('other-unit-list');
+    const resultTitle=document.getElementById('other-unit-search-result-title');
+
+    document.getElementById('favorite-other-unit-wrap')?.classList.remove('hidden');
+
+    if(!q){
+        otherUnits=[];
+        if(box){
+            box.innerHTML='';
+            box.classList.add('hidden');
+            box.style.height='';
+            box.style.maxHeight='';
+            box.style.overflow='';
+        }
+        resultTitle?.classList.add('hidden');
+        renderFavoriteOtherUnits();
         return;
     }
+
+    resultTitle?.classList.remove('hidden');
+
+    let query=sb
+        .from('units')
+        .select('id,unit_name,unit_code')
+        .order('unit_name')
+        .limit(50)
+        .or(`unit_name.ilike.%${q}%,unit_code.ilike.%${q}%`);
+
+    const {data,error}=await query;
+
+    if(error){
+        console.error(error);
+        if(box){
+            box.innerHTML='<div class="text-center py-4 text-xs text-red-400 bg-white rounded-xl border border-red-100">부대 목록을 불러오지 못했습니다.</div>';
+            box.classList.remove('hidden');
+        }
+        return;
+    }
+
     otherUnits=(data||[]).filter(unit=>unit.id!==currentProfile?.unit_id);
     renderOtherUnitList(otherUnits);
 }
@@ -962,18 +1652,457 @@ function getOtherDestinationLine(item){
     const destinationLine=item.destination?`<p class="text-xs text-gray-500 mt-1 truncate">행선지: ${escapeHtml(item.destination)}</p>`:'';
     return phoneLine+destinationLine;
 }
-function switchOtherView(view){
-    otherView=view;
-    ['calendar','list','weekly','next-weekly'].forEach(v=>{
-        document.getElementById(`btn-other-${v}`).className='py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1';
-        document.getElementById(`other-view-${v}`).classList.add('hidden');
-    });
-    document.getElementById(`btn-other-${view}`).className='py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1';
-    document.getElementById(`other-view-${view}`).classList.remove('hidden');
+
+const OTHER_VIEW_ORDER=['calendar','list','weekly','next-weekly'];
+let otherViewAnimating=false;
+let otherViewSwipeReady=false;
+
+function renderOtherViewByType(view){
     if(view==='calendar') renderOtherCalendar();
     if(view==='list') renderOtherList();
     if(view==='weekly') renderOtherWeekly(false);
     if(view==='next-weekly') renderOtherWeekly(true);
+}
+
+function getActiveOtherView(){
+    const active=OTHER_VIEW_ORDER
+        .map(view=>document.getElementById(`other-view-${view}`))
+        .find(section=>section && !section.classList.contains('hidden'));
+
+    return active ? active.id.replace('other-view-','') : 'calendar';
+}
+
+function updateOtherViewButtons(view){
+    OTHER_VIEW_ORDER.forEach(item=>{
+        const button=document.getElementById(`btn-other-${item}`);
+        if(button){
+            button.className='py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1';
+        }
+    });
+
+    const active=document.getElementById(`btn-other-${view}`);
+    if(active){
+        active.className='py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1';
+    }
+
+    otherView=view;
+}
+
+function getOtherViewDirection(fromView,toView){
+    const fromIndex=OTHER_VIEW_ORDER.indexOf(fromView);
+    const toIndex=OTHER_VIEW_ORDER.indexOf(toView);
+
+    if(fromIndex<0 || toIndex<0 || fromIndex===toIndex) return 0;
+
+    const forward=(toIndex-fromIndex+OTHER_VIEW_ORDER.length)%OTHER_VIEW_ORDER.length;
+    const backward=(fromIndex-toIndex+OTHER_VIEW_ORDER.length)%OTHER_VIEW_ORDER.length;
+
+    return forward<=backward ? 1 : -1;
+}
+
+function switchOtherViewFromButton(view,sourceElement){
+    const current=getActiveOtherView();
+    if(current===view || otherViewAnimating) return;
+
+    animateOtherView(view,getOtherViewDirection(current,view));
+}
+
+function animateOtherView(targetType,direction){
+    const currentView=document.getElementById(`other-view-${getActiveOtherView()}`);
+    const targetView=document.getElementById(`other-view-${targetType}`);
+
+    if(!currentView || !targetView || currentView===targetView || !direction || otherViewAnimating) return;
+
+    renderOtherViewByType(targetType);
+
+    const contentWrap=currentView.parentElement;
+    const currentRect=currentView.getBoundingClientRect();
+    const wrapRect=contentWrap.getBoundingClientRect();
+    const width=Math.max(currentRect.width,1);
+    const swipeGap=12;
+    const previousWrapPosition=contentWrap.style.position;
+    const previousWrapOverflow=contentWrap.style.overflow;
+
+    if(getComputedStyle(contentWrap).position==='static'){
+        contentWrap.style.position='relative';
+    }
+
+    contentWrap.style.overflow='hidden';
+
+    currentView.style.position='relative';
+    currentView.style.zIndex='5';
+    currentView.style.transform='translate3d(0,0,0)';
+    currentView.style.transition='none';
+    currentView.style.willChange='transform';
+    currentView.style.pointerEvents='none';
+
+    const targetClone=targetView.cloneNode(true);
+    targetClone.removeAttribute('id');
+    targetClone.querySelectorAll('[id]').forEach(element=>element.removeAttribute('id'));
+    targetClone.querySelectorAll('input,button,select,textarea,a').forEach(element=>element.tabIndex=-1);
+    targetClone.classList.remove('hidden');
+
+    const overlay=document.createElement('div');
+    overlay.setAttribute('aria-hidden','true');
+
+    Object.assign(overlay.style,{
+        position:'absolute',
+        left:`${currentRect.left-wrapRect.left}px`,
+        top:`${currentRect.top-wrapRect.top}px`,
+        width:`${width}px`,
+        height:`${Math.max(currentRect.height,1)}px`,
+        overflow:'hidden',
+        pointerEvents:'none',
+        zIndex:'5'
+    });
+
+    Object.assign(targetClone.style,{
+        position:'absolute',
+        left:'0',
+        top:'0',
+        width:`${width}px`,
+        minWidth:`${width}px`,
+        maxWidth:`${width}px`,
+        margin:'0',
+        boxSizing:'border-box',
+        pointerEvents:'none',
+        transform:`translate3d(${direction*(width+swipeGap)}px,0,0)`,
+        willChange:'transform'
+    });
+
+    overlay.appendChild(targetClone);
+    contentWrap.appendChild(overlay);
+    otherViewAnimating=true;
+
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        const duration=220;
+        const easing='cubic-bezier(.22,.61,.36,1)';
+
+        currentView.style.transition=`transform ${duration}ms ${easing}`;
+        targetClone.style.transition=`transform ${duration}ms ${easing}`;
+        currentView.style.transform=`translate3d(${-direction*(width+swipeGap)}px,0,0)`;
+        targetClone.style.transform='translate3d(0,0,0)';
+    }));
+
+    let finished=false;
+
+    const done=()=>{
+        if(finished) return;
+        finished=true;
+
+        overlay.remove();
+
+        currentView.style.position='';
+        currentView.style.zIndex='';
+        currentView.style.transform='';
+        currentView.style.transition='';
+        currentView.style.willChange='';
+        currentView.style.pointerEvents='';
+
+        currentView.classList.add('hidden');
+        targetView.classList.remove('hidden');
+
+        contentWrap.style.position=previousWrapPosition;
+        contentWrap.style.overflow=previousWrapOverflow;
+
+        updateOtherViewButtons(targetType);
+        otherViewAnimating=false;
+    };
+
+    targetClone.addEventListener('transitionend',done,{once:true});
+    setTimeout(done,300);
+}
+
+function initOtherViewSwipe(){
+    if(otherViewSwipeReady) return;
+
+    const area=document.getElementById('other-unit-view-box');
+    if(!area) return;
+
+    otherViewSwipeReady=true;
+
+    let startX=0;
+    let startY=0;
+    let lastX=0;
+    let lastTime=0;
+    let velocityX=0;
+    let tracking=false;
+    let axisLocked=null;
+    let dragPrepared=false;
+    let currentView=null;
+    let targetView=null;
+    let targetClone=null;
+    let overlay=null;
+    let contentWrap=null;
+    let targetType='';
+    let direction=0;
+    let width=1;
+    let previousWrapPosition='';
+    let previousWrapOverflow='';
+    const swipeGap=12;
+
+    function clearDrag(showTarget){
+        overlay?.remove();
+        overlay=null;
+
+        if(currentView){
+            currentView.style.position='';
+            currentView.style.zIndex='';
+            currentView.style.transform='';
+            currentView.style.transition='';
+            currentView.style.willChange='';
+            currentView.style.pointerEvents='';
+        }
+
+        if(currentView && targetView){
+            if(showTarget){
+                currentView.classList.add('hidden');
+                targetView.classList.remove('hidden');
+                updateOtherViewButtons(targetType);
+            }else{
+                currentView.classList.remove('hidden');
+                targetView.classList.add('hidden');
+            }
+        }
+
+        if(contentWrap){
+            contentWrap.style.position=previousWrapPosition;
+            contentWrap.style.overflow=previousWrapOverflow;
+        }
+
+        otherViewAnimating=false;
+        dragPrepared=false;
+        currentView=null;
+        targetView=null;
+        targetClone=null;
+        contentWrap=null;
+    }
+
+    function prepareDrag(deltaX){
+        const currentType=getActiveOtherView();
+        const currentIndex=OTHER_VIEW_ORDER.indexOf(currentType);
+
+        if(currentIndex<0) return false;
+
+        direction=deltaX<0 ? 1 : -1;
+        targetType=OTHER_VIEW_ORDER[(currentIndex+direction+OTHER_VIEW_ORDER.length)%OTHER_VIEW_ORDER.length];
+
+        currentView=document.getElementById(`other-view-${currentType}`);
+        targetView=document.getElementById(`other-view-${targetType}`);
+
+        if(!currentView || !targetView || currentView===targetView) return false;
+
+        renderOtherViewByType(targetType);
+
+        contentWrap=currentView.parentElement;
+        const currentRect=currentView.getBoundingClientRect();
+        const wrapRect=contentWrap.getBoundingClientRect();
+        width=Math.max(currentRect.width,1);
+
+        previousWrapPosition=contentWrap.style.position;
+        previousWrapOverflow=contentWrap.style.overflow;
+
+        if(getComputedStyle(contentWrap).position==='static'){
+            contentWrap.style.position='relative';
+        }
+
+        contentWrap.style.overflow='hidden';
+
+        Object.assign(currentView.style,{
+            position:'relative',
+            zIndex:'5',
+            transform:'translate3d(0,0,0)',
+            transition:'none',
+            willChange:'transform',
+            pointerEvents:'none'
+        });
+
+        targetClone=targetView.cloneNode(true);
+        targetClone.removeAttribute('id');
+        targetClone.querySelectorAll('[id]').forEach(element=>element.removeAttribute('id'));
+        targetClone.querySelectorAll('input,button,select,textarea,a').forEach(element=>element.tabIndex=-1);
+        targetClone.classList.remove('hidden');
+
+        overlay=document.createElement('div');
+        overlay.setAttribute('aria-hidden','true');
+
+        Object.assign(overlay.style,{
+            position:'absolute',
+            left:`${currentRect.left-wrapRect.left}px`,
+            top:`${currentRect.top-wrapRect.top}px`,
+            width:`${width}px`,
+            height:`${Math.max(currentRect.height,1)}px`,
+            overflow:'hidden',
+            pointerEvents:'none',
+            zIndex:'5'
+        });
+
+        Object.assign(targetClone.style,{
+            position:'absolute',
+            left:'0',
+            top:'0',
+            width:`${width}px`,
+            minWidth:`${width}px`,
+            maxWidth:`${width}px`,
+            margin:'0',
+            boxSizing:'border-box',
+            pointerEvents:'none',
+            transition:'none',
+            willChange:'transform',
+            transform:`translate3d(${direction*(width+swipeGap)}px,0,0)`
+        });
+
+        overlay.appendChild(targetClone);
+        contentWrap.appendChild(overlay);
+
+        otherViewAnimating=true;
+        dragPrepared=true;
+        return true;
+    }
+
+    function moveViews(deltaX){
+        if(!dragPrepared || !currentView || !targetClone) return;
+
+        const clamped=Math.max(-width,Math.min(width,deltaX));
+        currentView.style.transform=`translate3d(${clamped}px,0,0)`;
+        targetClone.style.transform=`translate3d(${direction*(width+swipeGap)+clamped}px,0,0)`;
+    }
+
+    function settleViews(complete){
+        if(!dragPrepared || !currentView || !targetClone) return;
+
+        const duration=complete ? 220 : 180;
+        const easing='cubic-bezier(.22,.61,.36,1)';
+
+        currentView.style.transition=`transform ${duration}ms ${easing}`;
+        targetClone.style.transition=`transform ${duration}ms ${easing}`;
+
+        requestAnimationFrame(()=>{
+            if(complete){
+                currentView.style.transform=`translate3d(${-direction*(width+swipeGap)}px,0,0)`;
+                targetClone.style.transform='translate3d(0,0,0)';
+            }else{
+                currentView.style.transform='translate3d(0,0,0)';
+                targetClone.style.transform=`translate3d(${direction*(width+swipeGap)}px,0,0)`;
+            }
+        });
+
+        let finished=false;
+
+        const done=()=>{
+            if(finished) return;
+            finished=true;
+            clearDrag(complete);
+        };
+
+        targetClone.addEventListener('transitionend',done,{once:true});
+        setTimeout(done,duration+80);
+    }
+
+    area.addEventListener('touchstart',event=>{
+        if(hasOpenBlockingOverlay() || otherViewAnimating || event.touches.length!==1) return;
+        if(event.target.closest('input,textarea,select,button,a,[contenteditable="true"]')) return;
+
+        const touch=event.touches[0];
+        startX=lastX=touch.clientX;
+        startY=touch.clientY;
+        lastTime=performance.now();
+        velocityX=0;
+        tracking=true;
+        axisLocked=null;
+        dragPrepared=false;
+
+        event.stopPropagation();
+    },{passive:true});
+
+    area.addEventListener('touchmove',event=>{
+        if(!tracking || event.touches.length!==1) return;
+
+        const touch=event.touches[0];
+        const deltaX=touch.clientX-startX;
+        const deltaY=touch.clientY-startY;
+        const absX=Math.abs(deltaX);
+        const absY=Math.abs(deltaY);
+
+        if(!axisLocked){
+            if(absX<8 && absY<8) return;
+
+            axisLocked=absX>absY*1.15 ? 'x' : 'y';
+
+            if(axisLocked==='y'){
+                tracking=false;
+                return;
+            }
+        }
+
+        if(axisLocked!=='x') return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if(!dragPrepared && !prepareDrag(deltaX)){
+            tracking=false;
+            return;
+        }
+
+        const now=performance.now();
+        const elapsed=Math.max(now-lastTime,1);
+        velocityX=(touch.clientX-lastX)/elapsed;
+        lastX=touch.clientX;
+        lastTime=now;
+
+        moveViews(deltaX);
+    },{passive:false});
+
+    area.addEventListener('touchend',event=>{
+        if(!tracking) return;
+
+        tracking=false;
+        event.stopPropagation();
+
+        if(!dragPrepared || event.changedTouches.length!==1) return;
+
+        const deltaX=event.changedTouches[0].clientX-startX;
+        const expectedDirection=Math.sign(deltaX)===-direction;
+        const passedDistance=Math.abs(deltaX)>=width*.24;
+        const passedVelocity=Math.abs(velocityX)>=.45;
+
+        settleViews(expectedDirection && (passedDistance || passedVelocity));
+    },{passive:true});
+
+    area.addEventListener('touchcancel',event=>{
+        tracking=false;
+        event.stopPropagation();
+
+        if(dragPrepared){
+            settleViews(false);
+        }
+    },{passive:true});
+}
+
+function switchOtherView(view){
+    otherView=view;
+
+    ['calendar','list','weekly','next-weekly'].forEach(v=>{
+        const button=document.getElementById(`btn-other-${v}`);
+        const section=document.getElementById(`other-view-${v}`);
+
+        if(button){
+            button.className='py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1';
+        }
+
+        section?.classList.add('hidden');
+    });
+
+    const activeButton=document.getElementById(`btn-other-${view}`);
+    const activeSection=document.getElementById(`other-view-${view}`);
+
+    if(activeButton){
+        activeButton.className='py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1';
+    }
+
+    activeSection?.classList.remove('hidden');
+    renderOtherViewByType(view);
 }
 function changeOtherMonth(offset){
     otherMonth+=offset;
@@ -1052,9 +2181,32 @@ function renderOtherCard(item, tone='white'){
     const typeBgClasses={weekday:'color-weekday',weekend:'color-weekend',overnight:'color-overnight',vacation:'color-vacation'};
     const typeNames={weekday:'평일외출',weekend:'주말외출',overnight:'외박',vacation:'휴가'};
     const bg=tone==='amber'?'bg-amber-50 border-amber-200':tone==='blue'?'bg-blue-50 border-blue-200':'bg-white border-gray-100';
+
+    let statusLabel=typeNames[item.type] || '';
+
+    if(tone==='amber'){
+        const todayStr=getTodayString();
+
+        if(item.type==='vacation'){
+            statusLabel=item.start===todayStr ? '휴가출발' : '휴가복귀';
+        }else if(item.type==='overnight'){
+            statusLabel=item.start===todayStr ? '외박출발' : '외박복귀';
+        }else if(item.type==='weekday'){
+            statusLabel='평일외출';
+        }else if(item.type==='weekend'){
+            statusLabel='주말외출';
+        }
+    }
+
     const div=document.createElement('div');
     div.className=`p-4 ${bg} rounded-xl shadow-xs flex justify-between items-center text-sm mb-2 border`;
-    div.innerHTML=`<div class="min-w-0 mr-2"><p class="font-bold text-gray-900 text-base truncate">${escapeHtml(item.name || getOtherProfile(item.user_id).name || '')}</p>${getOtherDestinationLine(item)}<p class="text-xs text-gray-500 mt-1 truncate">${(item.type==='weekday'||item.type==='weekend')?'일시: '+item.start:'기간: '+item.start+' ~ '+item.end}</p></div><span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color:#fff!important;">${typeNames[item.type]}</span>`;
+    div.innerHTML=`
+        <div class="min-w-0 mr-2">
+            <p class="font-bold text-gray-900 text-base truncate">${escapeHtml(item.name || getOtherProfile(item.user_id).name || '')}</p>
+            ${getOtherDestinationLine(item)}
+            <p class="text-xs text-gray-500 mt-1 truncate">${(item.type==='weekday'||item.type==='weekend')?'일시: '+item.start:'기간: '+item.start+' ~ '+item.end}</p>
+        </div>
+        <span class="px-3 py-1 rounded-lg text-xs font-black text-white ${typeBgClasses[item.type]}" style="color:#fff!important;">${statusLabel}</span>`;
     return div;
 }
 function renderOtherList(){
@@ -1096,26 +2248,26 @@ document.addEventListener('click', closeRateSummary);
 window.addEventListener('scroll', closeRateSummary, true);
 window.addEventListener('resize', closeRateSummary);
 
-function openSettingsModal(){document.getElementById('settings-modal').classList.remove('hidden');}
-function closeSettingsModal(){document.getElementById('settings-modal').classList.add('hidden');}
-function showConfirmToast(message, confirmText='확인', cancelText='취소'){
+function openSettingsModal(sourceElement=null){animatePopupFromSource(document.getElementById('settings-modal'),sourceElement);}
+function closeSettingsModal(){closePopupDown(document.getElementById('settings-modal'));}
+function showConfirmToast(message, confirmText='확인', cancelText='취소', sourceElement=null){
     return new Promise(resolve=>{
-        const existing=document.getElementById('custom-confirm-toast'); if(existing) existing.remove();
-        const toast=document.createElement('div');
-        toast.id='custom-confirm-toast';
-        toast.className='fixed inset-0 z-[20000] flex items-center justify-center bg-black/60 p-6';
-        toast.style.zIndex='20000';
-        toast.innerHTML=`<div class="bg-white rounded-2xl p-6 text-center shadow-2xl max-w-xs w-full"><p class="font-bold text-lg whitespace-pre-line mb-5">${escapeHtml(message)}</p><div class="flex gap-2"><button id="confirm-toast-cancel" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">${escapeHtml(cancelText)}</button><button id="confirm-toast-ok" class="flex-1 py-2.5 bg-[#F28C28] text-white rounded-xl font-bold text-sm">${escapeHtml(confirmText)}</button></div></div>`;
-        document.body.appendChild(toast);
-        document.getElementById('confirm-toast-cancel').onclick=()=>{toast.remove();resolve(false);};
-        document.getElementById('confirm-toast-ok').onclick=()=>{toast.remove();resolve(true);};
+        const existing=document.getElementById('custom-confirm-toast');if(existing)existing.remove();
+        const toast=document.createElement('div');toast.id='custom-confirm-toast';toast.className='fixed inset-0 z-[20000] flex items-center justify-center bg-black/60 p-6';toast.style.opacity='0';
+        toast.innerHTML=`<div class="bg-white rounded-2xl p-6 text-center shadow-2xl max-w-xs w-full"><div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-2xl font-black">!</div><p class="font-bold text-lg whitespace-pre-line mb-5">${escapeHtml(message)}</p><div class="flex gap-2"><button id="confirm-toast-cancel" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">${escapeHtml(cancelText)}</button><button id="confirm-toast-ok" class="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-bold text-sm">${escapeHtml(confirmText)}</button></div></div>`;
+        document.body.appendChild(toast);const panel=toast.firstElementChild;
+        if(sourceElement){const r=sourceElement.getBoundingClientRect(),p=panel.getBoundingClientRect();const tx=r.left+r.width/2-(p.left+p.width/2),ty=r.top+r.height/2-(p.top+p.height/2);panel.animate([{transform:`translate(${tx}px,${ty}px) scale(.15)`,opacity:.1},{transform:'translate(0,0) scale(1)',opacity:1}],{duration:330,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});}
+        else panel.animate([{transform:'translateY(28px) scale(.98)',opacity:0},{transform:'translateY(0) scale(1)',opacity:1}],{duration:320,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});
+        toast.animate([{opacity:0},{opacity:1}],{duration:220,fill:'both'});
+        let closing=false;const close=result=>{if(closing)return;closing=true;panel.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY(56px)',opacity:0}],{duration:230,easing:'ease-in',fill:'both'});toast.animate([{opacity:1},{opacity:0}],{duration:230,fill:'both'});setTimeout(()=>{toast.remove();resolve(result);},230);};
+        toast.querySelector('#confirm-toast-cancel').onclick=()=>close(false);toast.querySelector('#confirm-toast-ok').onclick=()=>close(true);
     });
 }
 
 function getProfileRoleForHelp(){
     return currentProfile?.role || 'user';
 }
-function openProfileEditModal(){
+function openProfileEditModal(sourceElement=null){
     const isAdmin = currentProfile?.role === 'admin';
     document.getElementById('profile-edit-name').value = currentProfile?.name || currentProfile?.display_name || '';
     document.getElementById('profile-edit-phone').value = currentProfile?.phone || '';
@@ -1126,11 +2278,9 @@ function openProfileEditModal(){
         document.getElementById('profile-edit-position').value = currentProfile?.position || '';
         if(isAdmin) loadMyAdminPosition();
     }
-    document.getElementById('profile-edit-modal').classList.remove('hidden');
+    animatePopupFromSource(document.getElementById('profile-edit-modal'),sourceElement);
 }
-function closeProfileEditModal(){
-    document.getElementById('profile-edit-modal').classList.add('hidden');
-}
+function closeProfileEditModal(){closePopupDown(document.getElementById('profile-edit-modal'));}
 async function loadMyAdminPosition(){
     // 직책은 is_admin이 아니라 profiles.position에서 관리합니다.
     if(!currentUser || currentProfile?.role !== 'admin') return;
@@ -1188,7 +2338,7 @@ async function saveProfileEdit(){
     if(typeof renderActiveView === 'function') renderActiveView();
     if(typeof renderCurrentTab === 'function') renderCurrentTab();
 }
-function openHelpModal(){
+function openHelpModal(sourceElement=null){
     const role=getProfileRoleForHelp();
     const isAdmin=role==='admin';
     const help=document.getElementById('help-content');
@@ -1211,11 +2361,9 @@ function openHelpModal(){
         <div><h4 class="font-black mb-1">주 행선지</h4><p>설정에서 출타 종류별 주 행선지를 저장하면, 출타 형태를 선택할 때 해당 행선지가 먼저 자동 입력됩니다. 등록 전 자유롭게 수정할 수 있습니다.</p></div>
         <div><h4 class="font-black mb-1">개인정보 수정</h4><p>이름과 휴대폰번호를 수정할 수 있습니다. 보안을 위해 저장 시 현재 비밀번호를 다시 입력해야 합니다.</p></div>
     `;
-    document.getElementById('help-modal').classList.remove('hidden');
+    animatePopupFromSource(document.getElementById('help-modal'),sourceElement);
 }
-function closeHelpModal(){
-    document.getElementById('help-modal').classList.add('hidden');
-}
+function closeHelpModal(){closePopupDown(document.getElementById('help-modal'));}
 
 async function handleLogout(){
     const ok=await showConfirmToast('로그아웃 하시겠습니까?','로그아웃','취소');
@@ -1260,6 +2408,10 @@ async function initPage(){
     updateTitle();
     await loadData();
     renderRateCalendar();
+    renderFavoriteOtherUnits();
+    initAdminTabSwipe();
+    initOtherViewSwipe();
+    initRateSummaryOutsideClose();
     subscribeRealtime();
 }
 window.onload=initPage;

@@ -6,6 +6,20 @@ async function login(email, password){
     });
 }
 
+// 비밀번호 재설정 이메일 요청
+async function requestPasswordReset(email, redirectTo){
+    return await sb.auth.resetPasswordForEmail(email, {
+        redirectTo
+    });
+}
+
+// 복구 세션에서 새 비밀번호 저장
+async function updatePassword(newPassword){
+    return await sb.auth.updateUser({
+        password: newPassword
+    });
+}
+
 // 로그아웃
 async function logout(){
     return await sb.auth.signOut();

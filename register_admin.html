@@ -14,8 +14,27 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard','Noto Sans KR',sans-serif;}
-body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
-.register-box{width:100%;max-width:420px;background:#fff;border-radius:18px;padding:35px 25px;box-shadow:0 10px 25px rgba(0,0,0,.08);}
+body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;overflow-x:hidden;}
+.register-box{
+    width:100%;max-width:420px;background:#fff;border-radius:18px;padding:35px 25px;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+    opacity:0;
+    will-change:transform,opacity,filter;
+}
+.register-box.page-enter-user{animation:registerEnterUser 560ms cubic-bezier(.22,1,.36,1) forwards;}
+.register-box.page-enter-admin{animation:registerEnterAdmin 560ms cubic-bezier(.22,1,.36,1) forwards;}
+.register-box.page-exit-login{animation:registerExitLogin 430ms cubic-bezier(.4,0,.2,1) forwards;}
+@keyframes registerEnterUser{
+    0%{opacity:0;transform:translateX(48px) scale(.96);filter:blur(7px);}
+    100%{opacity:1;transform:translateX(0) scale(1);filter:blur(0);}
+}
+@keyframes registerEnterAdmin{
+    0%{opacity:0;transform:translateX(-48px) scale(.96);filter:blur(7px);}
+    100%{opacity:1;transform:translateX(0) scale(1);filter:blur(0);}
+}
+@keyframes registerExitLogin{
+    to{opacity:0;transform:translateY(38px) scale(.96);filter:blur(7px);}
+}
 .title{text-align:center;font-size:28px;font-weight:700;margin-bottom:30px;}
 .input{width:100%;height:54px;border:1px solid #d9d9d9;border-radius:10px;padding:0 16px;font-size:16px;margin-bottom:15px;outline:none;}
 .input:focus{border-color:#F28C28;}
@@ -28,12 +47,24 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
 .guide{color:#2B7CFF;}
 .error{color:#E53935;visibility:hidden;}
 @media(max-width:420px){.register-box{padding:30px 20px;}.title{font-size:26px;}}
+
+body{
+    animation:registerPageFadeIn 360ms ease-out both;
+}
+@keyframes registerPageFadeIn{
+    from{opacity:0;}
+    to{opacity:1;}
+}
+@media (prefers-reduced-motion:reduce){
+    body{animation-duration:1ms!important;}
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="register-box">
+<div id="register-box" class="register-box">
     <div class="title">관리자 회원가입</div>
 
     <input type="email" id="email" class="input" placeholder="이메일">
@@ -52,7 +83,7 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
     <button id="registerBtn" class="register-btn">회원가입</button>
 
     <div class="back">
-        <a href="index.html">← 로그인으로</a>
+        <a href="index.html" id="backToLogin">← 로그인으로</a>
     </div>
 </div>
 
@@ -68,6 +99,27 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
 </div>
 
 <script>
+
+const registerBox=document.getElementById("register-box");
+const backToLogin=document.getElementById("backToLogin");
+
+function goToLoginWithTransition(){
+    if(registerBox){
+        registerBox.classList.remove("page-enter-user","page-enter-admin");
+        registerBox.classList.add("page-exit-login");
+    }
+    sessionStorage.setItem("loginIntroPlayed","1");
+    setTimeout(()=>location.replace("index.html"),410);
+}
+
+backToLogin.addEventListener("click",event=>{
+    event.preventDefault();
+    goToLoginWithTransition();
+});
+
+window.addEventListener("DOMContentLoaded",()=>{
+    registerBox.classList.add("page-enter-admin");
+});
 const email=document.getElementById("email");
 const password=document.getElementById("password");
 const passwordConfirm=document.getElementById("password-confirm");
@@ -262,9 +314,7 @@ if(position.value.trim()===""){
 
         triggerToast("회원가입 신청이 완료되었습니다.\n개발자의 승인을 기다려주세요.");
 
-        setTimeout(()=>{
-            location.replace("index.html");
-        },1500);
+        setTimeout(goToLoginWithTransition,1500);
 
     }finally{
         registering=false;

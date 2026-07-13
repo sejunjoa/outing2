@@ -1,9 +1,10 @@
-const CACHE_NAME = 'outing-app-v2.0.1';
+const CACHE_NAME = 'outing-app-v1.1.0';
 const APP_SHELL = [
   './',
   './index.html',
   './register_user.html',
   './register_admin.html',
+  './reset_password.html',
   './schedule_user.html',
   './config.js',
   './auth.js',

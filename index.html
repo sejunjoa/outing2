@@ -13,8 +13,94 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard','Noto Sans KR',sans-serif;}
-body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
-.login-box{width:100%;max-width:420px;background:#fff;border-radius:18px;padding:35px 25px;box-shadow:0 10px 25px rgba(0,0,0,.08);}
+body{
+    background:#f2f4f8;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    padding:20px;
+    overflow:hidden;
+}
+.login-box{
+    width:100%;
+    max-width:420px;
+    background:#fff;
+    border-radius:18px;
+    padding:35px 25px;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(28px) scale(.96);
+    filter:blur(8px);
+}
+.login-box.login-ready{
+    visibility:visible;
+    animation:loginBoxEnter 720ms cubic-bezier(.22,1,.36,1) forwards;
+}
+.intro-layer{
+    position:fixed;
+    inset:0;
+    z-index:10000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#f2f4f8;
+    pointer-events:none;
+}
+.intro-item{
+    position:absolute;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    will-change:transform,opacity,filter;
+}
+.intro-logo{
+    width:min(48vw,210px);
+    aspect-ratio:1 / 1;
+    height:auto;
+    object-fit:cover;
+    border-radius:26px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 12px 28px rgba(0,0,0,.14);
+}
+.intro-welcome{
+    font-size:clamp(30px,8vw,46px);
+    font-weight:800;
+    color:#1f2937;
+    letter-spacing:-1.5px;
+    white-space:nowrap;
+}
+.intro-item.enter{
+    animation:introEnter 620ms cubic-bezier(.22,1,.36,1) forwards;
+}
+.intro-item.exit{
+    animation:introExit 540ms cubic-bezier(.55,.06,.68,.19) forwards;
+}
+.intro-layer.finish{
+    animation:introLayerExit 420ms ease forwards;
+}
+@keyframes introEnter{
+    0%{opacity:0;transform:translateY(24px) scale(.86);filter:blur(12px);}
+    100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}
+}
+@keyframes introExit{
+    0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}
+    100%{opacity:0;transform:translateY(-10px) scale(.68);filter:blur(16px);}
+}
+@keyframes introLayerExit{
+    from{opacity:1;}
+    to{opacity:0;visibility:hidden;}
+}
+@keyframes loginBoxEnter{
+    0%{opacity:0;transform:translateY(28px) scale(.96);filter:blur(8px);}
+    100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}
+}
+@media (prefers-reduced-motion:reduce){
+    .intro-item,.intro-layer,.login-box{animation-duration:1ms!important;}
+}
 .title{text-align:center;font-size:28px;font-weight:700;margin-bottom:30px;}
 .input{width:100%;height:54px;border:1px solid #d9d9d9;border-radius:10px;padding:0 16px;font-size:16px;margin-bottom:15px;outline:none;}
 .input:focus{border-color:#2E5E4E;}
@@ -25,19 +111,144 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
 .admin-link{color:#F28C28;text-decoration:none;font-size:15px;font-weight:600;}
 .user-link:hover,.admin-link:hover{text-decoration:underline;}
 @media(max-width:420px){.login-box{padding:30px 20px;}.title{font-size:26px;}}
+
+.page-exit-left{animation:pageExitLeft 420ms cubic-bezier(.4,0,.2,1) forwards!important;}
+.page-exit-right{animation:pageExitRight 420ms cubic-bezier(.4,0,.2,1) forwards!important;}
+.login-box.return-enter{
+    visibility:visible;
+    animation:returnLoginEnter 560ms cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes pageExitLeft{
+    to{opacity:0;transform:translateX(-44px) scale(.96);filter:blur(6px);}
+}
+@keyframes pageExitRight{
+    to{opacity:0;transform:translateX(44px) scale(.96);filter:blur(6px);}
+}
+@keyframes returnLoginEnter{
+    0%{opacity:0;transform:translateY(34px) scale(.96);filter:blur(8px);}
+    100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}
+}
+.login-success-exit{
+    visibility:visible!important;
+    animation:loginSuccessExit 520ms cubic-bezier(.4,0,.2,1) forwards!important;
+}
+@keyframes loginSuccessExit{
+    0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}
+    45%{opacity:1;transform:translateY(-8px) scale(1.015);filter:blur(0);}
+    100%{opacity:0;transform:translateY(-42px) scale(.94);filter:blur(8px);}
+}
+
+.forgot-wrap{
+    margin-top:12px;
+    text-align:right;
+}
+.forgot-link{
+    border:0;
+    background:transparent;
+    color:#6b7280;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+}
+.forgot-link:hover{
+    color:#2E5E4E;
+    text-decoration:underline;
+}
+.reset-modal{
+    position:fixed;
+    inset:0;
+    z-index:20000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(0,0,0,.55);
+}
+.reset-modal.hidden{
+    display:none;
+}
+.reset-panel{
+    width:100%;
+    max-width:360px;
+    padding:24px;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 18px 42px rgba(0,0,0,.2);
+}
+.reset-panel-title{
+    font-size:20px;
+    font-weight:800;
+    text-align:center;
+    margin-bottom:8px;
+}
+.reset-panel-desc{
+    font-size:13px;
+    line-height:1.6;
+    color:#6b7280;
+    text-align:center;
+    margin-bottom:18px;
+}
+.reset-actions{
+    display:flex;
+    gap:8px;
+}
+.reset-action-btn{
+    flex:1;
+    height:46px;
+    border:0;
+    border-radius:12px;
+    font-size:14px;
+    font-weight:800;
+    cursor:pointer;
+}
+.reset-cancel{
+    background:#f3f4f6;
+    color:#4b5563;
+}
+.reset-submit{
+    background:#2E5E4E;
+    color:white;
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="login-box">
+<div id="intro-layer" class="intro-layer" aria-hidden="true">
+    <div id="intro-logo-wrap" class="intro-item">
+        <img src="icons/icon-512.png" alt="" class="intro-logo">
+    </div>
+    <div id="intro-welcome" class="intro-item intro-welcome">환영합니다!</div>
+</div>
+
+<div id="login-box" class="login-box">
     <div class="title">로그인</div>
     <input type="email" id="email" class="input" placeholder="이메일">
     <input type="password" id="password" class="input" placeholder="비밀번호">
     <button id="loginBtn" class="login-btn">로그인</button>
+    <div class="forgot-wrap">
+        <button id="forgotPasswordBtn" type="button" class="forgot-link">비밀번호를 잊으셨나요?</button>
+    </div>
     <div class="bottom">
-        <a href="register_user.html" class="user-link">회원가입</a>
-        <a href="register_admin.html" class="admin-link">관리자 회원가입</a>
+        <a href="register_user.html" id="userRegisterLink" class="user-link">회원가입</a>
+        <a href="register_admin.html" id="adminRegisterLink" class="admin-link">관리자 회원가입</a>
+    </div>
+</div>
+
+
+<div id="password-reset-modal" class="reset-modal hidden" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title">
+    <div id="password-reset-panel" class="reset-panel">
+        <div id="reset-modal-title" class="reset-panel-title">비밀번호 초기화</div>
+        <p class="reset-panel-desc">
+            가입한 이메일 주소를 입력하면<br>
+            새 비밀번호 설정 링크를 보내드립니다.
+        </p>
+        <input type="email" id="reset-email" class="input" placeholder="가입한 이메일">
+        <div class="reset-actions">
+            <button id="reset-cancel-btn" type="button" class="reset-action-btn reset-cancel">취소</button>
+            <button id="reset-submit-btn" type="button" class="reset-action-btn reset-submit">메일 보내기</button>
+        </div>
     </div>
 </div>
 
@@ -45,7 +256,128 @@ body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;m
 const email=document.getElementById("email");
 const password=document.getElementById("password");
 const loginBtn=document.getElementById("loginBtn");
+const forgotPasswordBtn=document.getElementById("forgotPasswordBtn");
+const passwordResetModal=document.getElementById("password-reset-modal");
+const passwordResetPanel=document.getElementById("password-reset-panel");
+const resetEmail=document.getElementById("reset-email");
+const resetCancelBtn=document.getElementById("reset-cancel-btn");
+const resetSubmitBtn=document.getElementById("reset-submit-btn");
 let loggingIn=false;
+
+
+
+function openPasswordResetModal(){
+    resetEmail.value=email.value.trim();
+    passwordResetModal.classList.remove("hidden");
+
+    passwordResetModal.animate(
+        [{opacity:0},{opacity:1}],
+        {duration:220,easing:"ease-out",fill:"both"}
+    );
+
+    passwordResetPanel.animate(
+        [
+            {opacity:0,transform:"translateY(28px) scale(.97)"},
+            {opacity:1,transform:"translateY(0) scale(1)"}
+        ],
+        {duration:320,easing:"cubic-bezier(.22,1,.36,1)",fill:"both"}
+    );
+
+    setTimeout(()=>resetEmail.focus(),120);
+}
+
+function closePasswordResetModal(){
+    const panelAnimation=passwordResetPanel.animate(
+        [
+            {opacity:1,transform:"translateY(0) scale(1)"},
+            {opacity:0,transform:"translateY(42px) scale(.97)"}
+        ],
+        {duration:230,easing:"ease-in",fill:"both"}
+    );
+
+    passwordResetModal.animate(
+        [{opacity:1},{opacity:0}],
+        {duration:230,easing:"ease-in",fill:"both"}
+    );
+
+    panelAnimation.finished
+        .then(()=>{
+            passwordResetModal.classList.add("hidden");
+            passwordResetModal.getAnimations().forEach(animation=>animation.cancel());
+            passwordResetPanel.getAnimations().forEach(animation=>animation.cancel());
+        })
+        .catch(()=>{
+            passwordResetModal.classList.add("hidden");
+        });
+}
+
+async function sendPasswordResetEmail(){
+    const targetEmail=resetEmail.value.trim();
+
+    if(!targetEmail){
+        triggerToast("이메일을 입력하세요.");
+        resetEmail.focus();
+        return;
+    }
+
+    resetSubmitBtn.disabled=true;
+    resetSubmitBtn.textContent="전송 중...";
+
+    try{
+        const redirectTo =
+            "https://sejunjoa.github.io/outing2/reset_password.html";
+        const {error}=await requestPasswordReset(targetEmail,redirectTo);
+
+        if(error){
+            console.error(error);
+
+            if(error.status===429 || /rate limit/i.test(error.message || "")){
+                triggerToast("요청이 너무 많습니다.\n잠시 후 다시 시도해주세요.");
+            }else{
+                triggerToast("재설정 메일 전송에 실패했습니다.\n잠시 후 다시 시도해주세요.");
+            }
+            return;
+        }
+
+        closePasswordResetModal();
+        triggerToast(
+            "이메일을 보냈습니다.\n메일함과 스팸함에서\n'Supabase Auth'로 부터 온\n이메일을 확인해주세요."
+        );
+    }finally{
+        resetSubmitBtn.disabled=false;
+        resetSubmitBtn.textContent="메일 보내기";
+    }
+}
+
+forgotPasswordBtn.addEventListener("click",openPasswordResetModal);
+resetCancelBtn.addEventListener("click",closePasswordResetModal);
+resetSubmitBtn.addEventListener("click",sendPasswordResetEmail);
+
+resetEmail.addEventListener("keydown",event=>{
+    if(event.key==="Enter"){
+        sendPasswordResetEmail();
+    }
+});
+
+passwordResetModal.addEventListener("click",event=>{
+    if(event.target===passwordResetModal){
+        closePasswordResetModal();
+    }
+});
+
+function moveToScheduleWithAnimation(url){
+    const box=document.getElementById("login-box");
+    if(!box){
+        location.replace(url);
+        return;
+    }
+
+    box.classList.remove("login-ready","return-enter","page-exit-left","page-exit-right");
+    box.classList.add("login-success-exit");
+    document.body.style.pointerEvents="none";
+
+    setTimeout(()=>location.replace(url),500);
+}
 
 async function moveByRole(user){
     const {data:profile,error:profileError}=await getProfile(user.id);
@@ -58,7 +390,7 @@ async function moveByRole(user){
 
     if(profile.role==="user"){
         if(profile.user_approved===true){
-            location.replace("schedule_user.html");
+            moveToScheduleWithAnimation("schedule_user.html");
             return;
         }
 
@@ -84,7 +416,7 @@ async function moveByRole(user){
     }
 
     if(admin?.isadmin){
-        location.replace("schedule_admin.html");
+        moveToScheduleWithAnimation("schedule_admin.html");
     }else{
         await logout();
         triggerToast("관리자 승인 대기중입니다.\n문의 : 010-9541-7788");
@@ -130,7 +462,81 @@ loginBtn.addEventListener("click",async()=>{
     });
 });
 
+function wait(ms){
+    return new Promise(resolve=>setTimeout(resolve,ms));
+}
+
+async function playIntroAnimation(){
+    const introLayer=document.getElementById("intro-layer");
+    const logo=document.getElementById("intro-logo-wrap");
+    const welcome=document.getElementById("intro-welcome");
+    const loginBox=document.getElementById("login-box");
+
+    logo.classList.add("enter");
+    await wait(1050);
+
+    logo.classList.remove("enter");
+    logo.classList.add("exit");
+    await wait(460);
+
+    welcome.classList.add("enter");
+    await wait(1050);
+
+    welcome.classList.remove("enter");
+    welcome.classList.add("exit");
+    await wait(430);
+
+    loginBox.classList.add("login-ready");
+    introLayer.classList.add("finish");
+    await wait(430);
+
+    introLayer.remove();
+    document.body.style.overflow="auto";
+}
+
+function goWithPageTransition(url, direction="left"){
+    const box=document.getElementById("login-box");
+    if(!box) {
+        location.href=url;
+        return;
+    }
+
+    box.classList.remove("login-ready","return-enter");
+    box.classList.add(direction==="right" ? "page-exit-right" : "page-exit-left");
+
+    setTimeout(()=>{
+        location.href=url;
+    },400);
+}
+
+document.getElementById("userRegisterLink").addEventListener("click",event=>{
+    event.preventDefault();
+    sessionStorage.setItem("authPageTransition","user");
+    goWithPageTransition("register_user.html","left");
+});
+
+document.getElementById("adminRegisterLink").addEventListener("click",event=>{
+    event.preventDefault();
+    sessionStorage.setItem("authPageTransition","admin");
+    goWithPageTransition("register_admin.html","right");
+});
+
 window.addEventListener("load",async()=>{
+    const introAlreadyPlayed=sessionStorage.getItem("loginIntroPlayed")==="1";
+    const introLayer=document.getElementById("intro-layer");
+    const loginBox=document.getElementById("login-box");
+
+    if(introAlreadyPlayed){
+        introLayer?.remove();
+        document.body.style.overflow="auto";
+        loginBox.classList.add("return-enter");
+    }else{
+        sessionStorage.setItem("loginIntroPlayed","1");
+        await playIntroAnimation();
+    }
+
+    sessionStorage.removeItem("authPageTransition");
+
     const {data:{session}}=await getSession();
     if(session) await moveByRole(session.user);
 });
