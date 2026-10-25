@@ -106,6 +106,9 @@ body{
 .input:focus{border-color:#2E5E4E;}
 .login-btn{width:100%;height:54px;border:none;border-radius:10px;background:#2E5E4E;color:#fff;font-size:18px;font-weight:600;cursor:pointer;margin-top:5px;}
 .login-btn:active{transform:scale(.98);}
+.install-login-btn{width:100%;min-height:44px;margin-top:10px;border:1px solid #2E5E4E;border-radius:10px;background:#fff;color:#2E5E4E;font-size:15px;font-weight:700;cursor:pointer;}
+.install-login-btn:active{transform:scale(.98);}
+.install-login-btn[hidden]{display:none!important;}
 .bottom{margin-top:20px;display:flex;justify-content:space-evenly;align-items:center;}
 .user-link{color:#2B7CFF;text-decoration:none;font-size:15px;font-weight:600;}
 .admin-link{color:#F28C28;text-decoration:none;font-size:15px;font-weight:600;}
@@ -211,6 +214,8 @@ body{
 }
 
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#10b981">
 </head>
 
 <body>
@@ -227,6 +232,7 @@ body{
     <input type="email" id="email" class="input" placeholder="이메일">
     <input type="password" id="password" class="input" placeholder="비밀번호">
     <button id="loginBtn" class="login-btn">로그인</button>
+    <button type="button" data-install-app class="install-login-btn" onclick="installOutingApp()">앱 설치</button>
     <div class="forgot-wrap">
         <button id="forgotPasswordBtn" type="button" class="forgot-link">비밀번호를 잊으셨나요?</button>
     </div>
@@ -542,5 +548,7 @@ window.addEventListener("load",async()=>{
 });
 </script>
 
+<script src="app-install.js?v=20261025-1"></script>
+<script>if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(console.warn));</script>
 </body>
 </html>

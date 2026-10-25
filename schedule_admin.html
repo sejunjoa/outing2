@@ -127,16 +127,12 @@
 
 <div class="bg-white p-3">
     <div class="max-w-md mx-auto">
-        <nav class="flex gap-2 w-full mb-3">
-            <div class="flex flex-1 gap-1">
-                <button id="btn-tab-calendar" onclick="switchViewTabFromButton('calendar', this)" class="py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1">달력</button>
-                <button id="btn-tab-list" onclick="switchViewTabFromButton('list', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">상세</button>
-            </div>
-            <div class="flex flex-1 gap-1">
-                <button id="btn-tab-weekly" onclick="switchViewTabFromButton('weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">이번주</button>
-                <button id="btn-tab-next-weekly" onclick="switchViewTabFromButton('next-weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">다음주</button>
-            </div>
-        </nav>
+        <nav class="grid grid-cols-4 gap-1.5 w-full mb-3">
+<button id="btn-tab-calendar" onclick="switchViewTabFromButton('calendar', this)" class="py-2 rounded-xl font-bold text-xs bg-[#F28C28] text-white shadow-xs flex-1 min-w-0">달력</button>
+<button id="btn-tab-list" onclick="switchViewTabFromButton('list', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1 min-w-0">상세</button>
+<button id="btn-tab-weekly" onclick="switchViewTabFromButton('weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1 min-w-0">이번주</button>
+<button id="btn-tab-next-weekly" onclick="switchViewTabFromButton('next-weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1 min-w-0">다음주</button>
+</nav>
 
         <input type="text" id="search-input" oninput="filterData()" placeholder="출타자 이름 검색..." 
                class="w-full p-2 mb-3 border border-gray-200 rounded-lg text-sm">
@@ -318,7 +314,9 @@
                 </div>
 <div class="grid grid-cols-1 gap-2 pt-1">
                     <button onclick="openProfileEditModal(this)" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
-                    <button onclick="openHelpModal(this)" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
+                    <button type="button" data-install-app onclick="installOutingApp()" class="w-full py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-sm active:scale-95 transition-all">앱 설치</button>
+                    <button onclick="openPatchNotesModal(this)" class="w-full py-2.5 bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm active:scale-95 transition-all">패치노트 확인</button>
+<button onclick="openHelpModal(this)" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
                     <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
                     <button onclick="handleDeleteAccount()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all">회원탈퇴</button>
                 </div>
@@ -393,6 +391,8 @@
     </div>
 </div>
 
+<script src="patchnotes.js?v=20261025-2"></script>
+<script src="app-install.js?v=20261025-1"></script>
 </body>
 
     
@@ -2115,23 +2115,22 @@ async function handleLogout(){
         let pressTimer;
         let currentEditId = null;
 
+        // 한 번 터치/클릭하면 삭제 확인창을 엽니다. 삭제 확정은 확인창에서만 합니다.
         function setupLongPress(element, item) {
-            let pressTimer;
-            
-            const start = () => {
-                pressTimer = setTimeout(() => {
-                    currentEditId = item.id;
-                    showConfirmModal(element);
-                }, 600);
+            element.style.cursor = 'pointer';
+            element.setAttribute('role', 'button');
+            element.setAttribute('tabindex', '0');
+            const show = () => {
+                currentEditId = item.id;
+                showConfirmModal(element);
             };
-            const clear = () => clearTimeout(pressTimer);
-
-            element.addEventListener('touchstart', start);
-            element.addEventListener('touchend', clear);
-            element.addEventListener('touchmove', clear);
-            element.addEventListener('mousedown', start);
-            element.addEventListener('mouseup', clear);
-            element.addEventListener('mouseleave', clear);
+            element.addEventListener('click', show);
+            element.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    show();
+                }
+            });
         }
 
         function openEditModal(item) {

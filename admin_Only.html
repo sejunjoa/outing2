@@ -278,7 +278,9 @@
                 </div>
 <div class="grid grid-cols-1 gap-2 pt-1">
                 <button onclick="openProfileEditModal(this)" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
-                <button onclick="openHelpModal(this)" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
+                <button type="button" data-install-app onclick="installOutingApp()" class="w-full py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-sm active:scale-95 transition-all">앱 설치</button>
+                    <button onclick="openPatchNotesModal(this)" class="w-full py-2.5 bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm active:scale-95 transition-all">패치노트 확인</button>
+<button onclick="openHelpModal(this)" class="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
                 <button onclick="handleLogout()" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
                 <button onclick="handleDeleteAccount()" class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all">회원탈퇴</button>
             </div>
@@ -2698,5 +2700,7 @@ async function initPage(){
 }
 window.onload=initPage;
 </script>
+<script src="patchnotes.js?v=20261025-2"></script>
+<script src="app-install.js?v=20261025-1"></script>
 </body>
 </html>

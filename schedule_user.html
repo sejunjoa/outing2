@@ -130,6 +130,31 @@
             }
         }
 
+
+        /* 나의 출타 카드는 수직 스크롤과 가로 탭 스와이프를 모두 허용합니다. */
+        .mine-outing-card { touch-action: pan-y; }
+
+        /* 설정 팝업 전용 세로 스크롤: 내부 영역만 움직임 */
+        #settings-modal .settings-dialog { display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+        #settings-modal .settings-scroll-shell { position:relative; flex:1 1 auto; min-height:0; }
+        #settings-modal .settings-scroll-content {
+            height:100%; overflow-y:auto; overscroll-behavior:contain;
+            -webkit-overflow-scrolling:touch; scrollbar-width:none;
+            padding-right:12px; touch-action:pan-y;
+        }
+        #settings-modal .settings-scroll-content::-webkit-scrollbar { display:none; }
+        #settings-modal .settings-scroll-track {
+            position:absolute; top:3px; right:0; bottom:3px; width:6px;
+            border-radius:999px; background:#eef2f4;
+            touch-action:none; cursor:pointer;
+        }
+        #settings-modal .settings-scroll-thumb {
+            position:absolute; left:0; right:0; top:0; border-radius:999px;
+            background:#94a3b8; min-height:26px; cursor:grab;
+        }
+        #settings-modal .settings-scroll-thumb:active { background:#64748b; cursor:grabbing; }
+        #settings-modal .settings-scroll-track.is-hidden { opacity:0; pointer-events:none; }
+
 </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased relative">
@@ -140,6 +165,14 @@
         📱 앱 설치
     </button>
 
+    <div id="my-past-outing-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50" onclick="if(event.target===this)closePopupDown(this)">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl">
+            <h2 class="text-lg font-bold mb-1 text-center">나의 과거 출타</h2>
+            <p class="text-xs text-gray-400 text-center mb-4">시작일이 지난 출타 · 조회 전용</p>
+            <div id="my-past-outing-list" class="max-h-72 overflow-y-auto"></div>
+            <button type="button" onclick="closePopupDown(document.getElementById('my-past-outing-modal'))" class="w-full mt-4 py-3 bg-gray-100 rounded-xl font-bold text-sm">닫기</button>
+        </div>
+    </div>
     <div id="past-outing-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
         <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl">
             <h2 class="text-lg font-bold mb-2 text-center">지난 세 달간의 출타</h2>
@@ -176,16 +209,13 @@
 
             <div class="bg-white p-3">
                 <div class="max-w-md mx-auto">
-                    <nav class="flex gap-2 w-full mb-3">
-                        <div class="flex flex-1 gap-1">
-                            <button id="btn-tab-calendar" onclick="switchViewTabFromButton('calendar', this)" class="py-2 rounded-xl font-bold text-xs bg-blue-600 text-white shadow-xs flex-1">달력</button>
-                            <button id="btn-tab-list" onclick="switchViewTabFromButton('list', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">상세</button>
-                        </div>
-                        <div class="flex flex-1 gap-1">
-                            <button id="btn-tab-weekly" onclick="switchViewTabFromButton('weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">이번주</button>
-                            <button id="btn-tab-next-weekly" onclick="switchViewTabFromButton('next-weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1">다음주</button>
-                        </div>
-                    </nav>
+                    <nav class="grid grid-cols-5 gap-1.5 w-full mb-3">
+<button id="btn-tab-calendar" onclick="switchViewTabFromButton('calendar', this)" class="py-2 rounded-xl font-bold text-xs bg-blue-600 text-white shadow-xs flex-1 min-w-0">달력</button>
+<button id="btn-tab-list" onclick="switchViewTabFromButton('list', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1 min-w-0">상세</button>
+<button id="btn-tab-mine" onclick="switchViewTabFromButton('mine', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1 min-w-0">나의 출타</button>
+<button id="btn-tab-weekly" onclick="switchViewTabFromButton('weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1 min-w-0">이번주</button>
+<button id="btn-tab-next-weekly" onclick="switchViewTabFromButton('next-weekly', this)" class="py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1 min-w-0">다음주</button>
+</nav>
 
                     <input type="text" id="search-input" oninput="filterData()" placeholder="출타자 이름 검색..." 
                            class="w-full p-2 mb-3 border border-gray-200 rounded-lg text-sm">
@@ -247,6 +277,7 @@
                     </div>
                 </section>
             
+                <section id="view-mine" class="hidden p-3 max-w-md mx-auto w-full"></section>
                 <section id="view-weekly" class="hidden p-4 max-w-md mx-auto w-full"></section>
                 <section id="view-next-weekly" class="hidden p-4 max-w-md mx-auto w-full"></section>
             </div>
@@ -340,14 +371,15 @@
         </div>
     </div>
 
-    <div id="settings-modal" class="fixed inset-0 hidden flex items-center justify-center z-[9999] bg-black/50 p-2 sm:p-4 overflow-y-auto overscroll-contain">
-        <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-xl w-full max-w-sm my-auto max-h-[calc(100dvh-16px)] sm:max-h-[88vh] overflow-y-auto overscroll-contain">
+    <div id="settings-modal" class="fixed inset-0 hidden flex items-center justify-center z-[9999] bg-black/50 p-2 sm:p-4 overflow-hidden">
+        <div class="settings-dialog bg-white p-4 sm:p-5 rounded-2xl shadow-xl w-full max-w-sm my-auto max-h-[calc(100dvh-16px)] sm:max-h-[88vh]">
             <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
                 <h3 class="text-lg font-bold text-gray-900">설정</h3>
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
             </div>
 
-            <div class="space-y-3">
+            <div class="settings-scroll-shell">
+              <div id="settings-scroll-content" class="settings-scroll-content space-y-3" tabindex="0" aria-label="설정 항목 스크롤 영역">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">입대일</label>
                     <input type="date" id="settings-enlist-date" onchange="saveProfileSettings()" class="w-full px-3 py-1.5 sm:py-2 border border-gray-300 rounded-xl text-sm focus:outline-hidden focus:border-emerald-600">
@@ -374,8 +406,10 @@
                 <div class="grid grid-cols-2 gap-1.5 sm:gap-2 pt-2 sm:pt-3 border-t border-gray-100">
                     <button onclick="openProfileEditModal(this)" class="w-full py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">개인정보 수정</button>
                     <button onclick="openUnitTransferModal(this)" class="w-full py-2 sm:py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-sm active:scale-95 transition-all">부대이동</button>
-                    <button onclick="openHelpModal(this)" class="w-full py-2 sm:py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
-                    <button onclick="handleLogout()" class="w-full py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all">로그아웃</button>
+                    <button type="button" data-install-app onclick="installOutingApp()" class="w-full py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-sm active:scale-95 transition-all">앱 설치</button>
+                    <button onclick="openPatchNotesModal(this)" class="w-full py-2.5 bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm active:scale-95 transition-all">패치노트 확인</button>
+<button onclick="openHelpModal(this)" class="w-full py-2 sm:py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-95 transition-all">도움말</button>
+                    <button onclick="handleLogout()" class="w-full py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm active:scale-95 transition-all col-span-2">로그아웃</button>
                     <button onclick="handleDeleteAccount()" class="w-full py-2 sm:py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-all col-span-2">회원탈퇴</button>
                 </div>
 
@@ -384,7 +418,9 @@
                 </div>
             </div>
 
-            <button onclick="closeSettingsModal()" class="w-full mt-3 sm:mt-5 py-2.5 sm:py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">닫기</button>
+              </div>
+              <div id="settings-scroll-track" class="settings-scroll-track" role="scrollbar" aria-label="설정 세로 스크롤" aria-orientation="vertical" aria-controls="settings-scroll-content" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><div id="settings-scroll-thumb" class="settings-scroll-thumb"></div></div>
+            </div>
         </div>
     </div>
 
@@ -470,6 +506,8 @@
     </div>
 </div>
 
+<script src="patchnotes.js?v=20261025-2"></script>
+<script src="app-install.js?v=20261025-1"></script>
 </body>
 
     
@@ -486,6 +524,7 @@ function hasOpenBlockingOverlay(){
         '#date-filter-modal',
         '#confirm-modal',
         '#past-outing-modal',
+        '#my-past-outing-modal',
         '#outing-popup',
         '#unit-created-popup',
         '#unit-transfer-modal'
@@ -631,6 +670,7 @@ function hasOpenBlockingOverlay(){
             triggerToast('삭제되었습니다.');
             await loadData();
             renderListTab();
+            renderMyOutings();
             renderCalendar();
         }
 
@@ -700,6 +740,7 @@ function hasOpenBlockingOverlay(){
             triggerToast('수정되었습니다.');
             await loadData();
             renderListTab();
+            renderMyOutings();
             renderCalendar();
         }
 
@@ -733,13 +774,14 @@ function hasOpenBlockingOverlay(){
         let scrollPos = {
             viewCalendar: 0,
             viewList: 0,
+            viewMine: 0,
             viewWeekly: 0,
             viewNextWeekly: 0
         };
         let isTabAnimating = false;
 
         function updateTabButton(viewType) {
-            const btnIds = ['btn-tab-calendar', 'btn-tab-list', 'btn-tab-weekly', 'btn-tab-next-weekly'];
+            const btnIds = ['btn-tab-calendar', 'btn-tab-list', 'btn-tab-mine', 'btn-tab-weekly', 'btn-tab-next-weekly'];
             btnIds.forEach(id => {
                 const btn = document.getElementById(id);
                 btn.className = 'py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 flex-1';
@@ -755,6 +797,7 @@ function hasOpenBlockingOverlay(){
             const currentData = getFilteredData();
             if(viewType === 'calendar') renderCalendar(currentData);
             else if(viewType === 'list') renderListTab(currentData);
+            else if(viewType === 'mine') renderMyOutings(currentData);
             else if(viewType === 'weekly') renderWeeklyTab(currentData);
             else if(viewType === 'next-weekly') renderNextWeeklyTab(currentData);
         }
@@ -765,7 +808,7 @@ function hasOpenBlockingOverlay(){
         }
 
         function getTabDirection(fromType, toType) {
-            const order = ['calendar', 'list', 'weekly', 'next-weekly'];
+            const order = ['calendar', 'list', 'mine', 'weekly', 'next-weekly'];
             const fromIndex = order.indexOf(fromType);
             const toIndex = order.indexOf(toType);
             if(fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return 0;
@@ -877,7 +920,7 @@ function hasOpenBlockingOverlay(){
             renderViewByType(viewType);
 
             if(!animate || !currentView || currentView === targetView || !direction){
-                ['view-calendar', 'view-list', 'view-weekly', 'view-next-weekly']
+                ['view-calendar', 'view-list', 'view-mine', 'view-weekly', 'view-next-weekly']
                     .forEach(id => document.getElementById(id).classList.add('hidden'));
                 targetView.classList.remove('hidden');
                 restoreViewScroll(viewType);
@@ -976,9 +1019,10 @@ function hasOpenBlockingOverlay(){
             }, 380);
         }
 
-        const VIEW_TAB_ORDER = ['calendar', 'list', 'weekly', 'next-weekly'];
+        const VIEW_TAB_ORDER = ['calendar', 'list', 'mine', 'weekly', 'next-weekly'];
         let tabSwipeInitialized = false;
         let suppressCalendarClickUntil = 0;
+        let suppressMyOutingCardClickUntil = 0;
 
         function getActiveViewType() {
             const activeSection = document.querySelector('main section:not(.hidden)');
@@ -1000,6 +1044,7 @@ function hasOpenBlockingOverlay(){
             let velocityX = 0;
             let tracking = false;
             let axisLocked = null;
+            let startedOnMineCard = false;
             let dragPrepared = false;
             let currentView = null;
             let targetView = null;
@@ -1175,7 +1220,10 @@ function hasOpenBlockingOverlay(){
 
             swipeArea.addEventListener('touchstart', (event) => {
                 if (hasOpenBlockingOverlay() || isTabAnimating || event.touches.length !== 1) return;
-                if (event.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) return;
+                // 출타 카드 내부에서 시작된 터치는 탭과 가로 스와이프를 모두 판별합니다.
+                // 다른 버튼과 입력 요소는 기존대로 스와이프 대상에서 제외합니다.
+                const isMineCard = !!event.target.closest('#view-mine .mine-outing-card');
+                if (!isMineCard && event.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) return;
 
                 const touch = event.touches[0];
                 startX = lastX = touch.clientX;
@@ -1184,6 +1232,7 @@ function hasOpenBlockingOverlay(){
                 velocityX = 0;
                 tracking = true;
                 axisLocked = null;
+                startedOnMineCard = isMineCard;
                 dragPrepared = false;
             }, { passive: true });
 
@@ -1197,8 +1246,12 @@ function hasOpenBlockingOverlay(){
                 const absY = Math.abs(deltaY);
 
                 if (!axisLocked) {
-                    if (absX < 8 && absY < 8) return;
-                    axisLocked = absX > absY * 1.15 ? 'x' : 'y';
+                    // 카드에서 시작하면 7px 이후 즉시 방향을 판정하되
+                    // 수직 이동이 우세하면 일반 목록 스크롤을 유지합니다.
+                    const lockThreshold = startedOnMineCard ? 7 : 8;
+                    const directionRatio = startedOnMineCard ? 1.12 : 1.15;
+                    if (absX < lockThreshold && absY < lockThreshold) return;
+                    axisLocked = absX > absY * directionRatio ? 'x' : 'y';
                     if (axisLocked === 'y') {
                         tracking = false;
                         return;
@@ -1206,6 +1259,8 @@ function hasOpenBlockingOverlay(){
                 }
 
                 if (axisLocked !== 'x') return;
+                // 가로 드래그 후 발생할 수 있는 합성 click이 수정 팝업을 열지 않게 합니다.
+                if (startedOnMineCard) suppressMyOutingCardClickUntil = Date.now() + 400;
                 event.preventDefault();
 
                 if (!dragPrepared && !prepareDrag(deltaX)) {
@@ -1231,10 +1286,12 @@ function hasOpenBlockingOverlay(){
 
                 const deltaX = event.changedTouches[0].clientX - startX;
                 const movedInExpectedDirection = Math.sign(deltaX) === -direction;
-                const passedDistance = Math.abs(deltaX) >= width * 0.24;
-                const passedVelocity = Math.abs(velocityX) >= 0.45;
+                // '나의 출타' 카드에서는 좀 더 짧고 느린 스와이프도 탭 이동으로 인식합니다.
+                const passedDistance = Math.abs(deltaX) >= width * (startedOnMineCard ? 0.18 : 0.24);
+                const passedVelocity = Math.abs(velocityX) >= (startedOnMineCard ? 0.34 : 0.45);
                 const complete = movedInExpectedDirection && (passedDistance || passedVelocity);
 
+                if (startedOnMineCard) suppressMyOutingCardClickUntil = Date.now() + 400;
                 suppressCalendarClickUntil = Date.now() + 500;
                 settleViews(complete);
             }, { passive: true });
@@ -1272,6 +1329,7 @@ function hasOpenBlockingOverlay(){
             const activeView = document.querySelector('section:not(.hidden)').id;
             if (activeView === 'view-calendar') renderCalendar(filteredData);
             else if (activeView === 'view-list') renderListTab(filteredData);
+            else if (activeView === 'view-mine') renderMyOutings(filteredData);
             else if (activeView === 'view-weekly') renderWeeklyTab(filteredData);
             else if (activeView === 'view-next-weekly') renderNextWeeklyTab(filteredData);
         }
@@ -1386,7 +1444,64 @@ function hasOpenBlockingOverlay(){
 
 
 
-        function openSettingsModal(sourceElement = null){
+        
+// 설정 전용 스크롤바: 터치/휠/키보드/드래그 시 모두 위치 동기화.
+(function setupSettingsScrollbar(){
+    const content=document.getElementById('settings-scroll-content');
+    const track=document.getElementById('settings-scroll-track');
+    const thumb=document.getElementById('settings-scroll-thumb');
+    if(!content || !track || !thumb) return;
+    function update(){
+        const scrollable=Math.max(0,content.scrollHeight-content.clientHeight);
+        const trackHeight=track.clientHeight;
+        track.classList.toggle('is-hidden', scrollable < 2);
+        const thumbHeight=scrollable ? Math.max(26,Math.min(trackHeight,trackHeight*content.clientHeight/content.scrollHeight)) : trackHeight;
+        thumb.style.height=thumbHeight+'px';
+        thumb.style.transform='translateY('+(scrollable ? (content.scrollTop/scrollable)*(trackHeight-thumbHeight) : 0)+'px)';
+        track.setAttribute('aria-valuenow',String(scrollable ? Math.round(100*content.scrollTop/scrollable) : 0));
+    }
+    function moveTo(clientY,grabOffset){
+        const rect=track.getBoundingClientRect();
+        const travel=rect.height-thumb.offsetHeight;
+        if(travel<=0) return;
+        const fraction=Math.max(0,Math.min(1,(clientY-rect.top-grabOffset)/travel));
+        content.scrollTop=fraction*(content.scrollHeight-content.clientHeight);
+    }
+    let pointerId=null, grabOffset=0;
+    track.addEventListener('pointerdown',event=>{
+        if(track.classList.contains('is-hidden')) return;
+        const thumbRect=thumb.getBoundingClientRect();
+        grabOffset=event.target===thumb ? event.clientY-thumbRect.top : thumbRect.height/2;
+        pointerId=event.pointerId;
+        track.setPointerCapture(pointerId);
+        moveTo(event.clientY,grabOffset);
+        event.preventDefault();
+    });
+    track.addEventListener('pointermove',event=>{
+        if(pointerId===event.pointerId){moveTo(event.clientY,grabOffset);event.preventDefault();}
+    });
+    const endDrag=()=>{pointerId=null;};
+    track.addEventListener('pointerup',endDrag);
+    track.addEventListener('pointercancel',endDrag);
+    track.addEventListener('keydown',event=>{
+        let delta=0;
+        if(event.key==='ArrowDown') delta=45;
+        if(event.key==='ArrowUp') delta=-45;
+        if(event.key==='PageDown') delta=content.clientHeight*.8;
+        if(event.key==='PageUp') delta=-content.clientHeight*.8;
+        if(event.key==='Home'){content.scrollTop=0;event.preventDefault();return;}
+        if(event.key==='End'){content.scrollTop=content.scrollHeight;event.preventDefault();return;}
+        if(delta){content.scrollTop+=delta;event.preventDefault();}
+    });
+    content.addEventListener('scroll',update,{passive:true});
+    window.addEventListener('resize',update);
+    if('ResizeObserver' in window) new ResizeObserver(update).observe(content);
+    if('MutationObserver' in window) new MutationObserver(update).observe(content,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden']});
+    window.updateSettingsScrollbar=update;
+    update();
+})();
+
+function openSettingsModal(sourceElement = null){
             if(!currentProfile) return;
 
             document.getElementById('settings-enlist-date').value = currentProfile.enlist_date || '';
@@ -1396,7 +1511,9 @@ function hasOpenBlockingOverlay(){
             document.getElementById('settings-overnight-destination').value = currentProfile.overnight_destination || '';
             document.getElementById('settings-vacation-destination').value = currentProfile.vacation_destination || '';
             document.getElementById('settings-save-status').innerText = '';
+            document.getElementById('settings-scroll-content').scrollTop=0;
             animatePopupFromSource(document.getElementById('settings-modal'), sourceElement);
+            requestAnimationFrame(()=>window.updateSettingsScrollbar?.());
         }
 
         function closeSettingsModal(){
@@ -1964,26 +2081,62 @@ async function handleLogout(){
         let pressTimer;
         let currentEditId = null;
 
+        // 출타 수정은 '나의 출타'에서만 한 번 터치하여 접근합니다.
         function setupLongPress(element, item) {
-            let pressTimer;
-            
-            const start = () => {
-                pressTimer = setTimeout(() => {
-                    if(!canModify(item)){
-                        triggerToast('본인의 출타만\n수정 또는 삭제할 수 있습니다.');
-                        return;
-                    }
-                    openEditModal(item, element);
-                }, 600);
-            };
-            const clear = () => clearTimeout(pressTimer);
+            // 상세/주간 목록은 읽기 전용입니다.
+        }
 
-            element.addEventListener('touchstart', start);
-            element.addEventListener('touchend', clear);
-            element.addEventListener('touchmove', clear);
-            element.addEventListener('mousedown', start);
-            element.addEventListener('mouseup', clear);
-            element.addEventListener('mouseleave', clear);
+        function renderMyOutings(dataFromFilter) {
+            const container = document.getElementById('view-mine');
+            if (!container) return;
+            const mine = (dataFromFilter || getFilteredData())
+                .filter(item => canModify(item) && item.start >= getTodayString())
+                .sort((a, b) => a.start.localeCompare(b.start));
+            const labels = { weekday:'평일외출', weekend:'주말외출', overnight:'외박', vacation:'휴가' };
+            const colors = { weekday:'color-weekday', weekend:'color-weekend', overnight:'color-overnight', vacation:'color-vacation' };
+            container.innerHTML = '<h3 class="font-extrabold text-blue-700 text-sm mb-3">나의 출타</h3>';
+            if (!mine.length) {
+                container.insertAdjacentHTML('beforeend', '<div class="text-center py-12 text-sm text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">등록된 나의 출타가 없습니다.</div>');
+            }
+            mine.forEach(item => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'mine-outing-card w-full text-left p-4 bg-white rounded-xl shadow-xs flex justify-between items-center text-sm mb-2 border border-gray-100 active:bg-blue-50';
+                card.innerHTML = `<div class="min-w-0"><p class="font-bold text-gray-900 text-base">${escapeHtml(item.name || '')}</p>${getDestinationLine(item)}<p class="text-xs text-gray-500 mt-1">${item.type === 'weekday' || item.type === 'weekend' ? '일시: ' + item.start : '기간: ' + item.start + ' ~ ' + item.end}</p></div><span class="px-3 py-1 rounded-lg text-xs font-black text-white shrink-0 ${colors[item.type] || ''}" style="color:#fff!important">${labels[item.type] || ''}</span>`;
+                card.addEventListener('click', () => {
+                    if (Date.now() < suppressMyOutingCardClickUntil) return;
+                    openEditModal(item, card);
+                });
+                container.appendChild(card);
+            });
+            const pastButton = document.createElement('button');
+            pastButton.type = 'button';
+            pastButton.className = 'w-full py-3 mt-4 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm';
+            pastButton.textContent = '과거 출타 보기';
+            pastButton.addEventListener('click', showMyPastOutingsModal);
+            container.appendChild(pastButton);
+        }
+
+        function showMyPastOutingsModal() {
+            const modal = document.getElementById('my-past-outing-modal');
+            const container = document.getElementById('my-past-outing-list');
+            const today = getTodayString();
+            const typeBg = { weekday:'color-weekday', weekend:'color-weekend', overnight:'color-overnight', vacation:'color-vacation' };
+            const typeNames = { weekday:'평일외출', weekend:'주말외출', overnight:'외박', vacation:'휴가' };
+            const past = outData.filter(item => canModify(item) && item.start < today)
+                .sort((a,b) => b.start.localeCompare(a.start));
+            container.innerHTML = '';
+            if (!past.length) {
+                container.innerHTML = '<p class="text-center py-6 text-sm text-gray-400">과거 출타 기록이 없습니다.</p>';
+            } else {
+                past.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'p-3 bg-white rounded-xl text-sm border border-gray-100 mb-2 flex justify-between items-center gap-2';
+                    card.innerHTML = `<div class="min-w-0"><p class="font-bold text-gray-700">${escapeHtml(item.name || '')}</p>${getDestinationLine(item)}<p class="text-xs text-gray-500 mt-1">${item.type === 'weekday' || item.type === 'weekend' ? '일시: ' + escapeHtml(item.start) : '기간: ' + escapeHtml(item.start) + ' ~ ' + escapeHtml(item.end)}</p></div><span class="px-2 py-1 rounded-lg text-[10px] font-black text-white shrink-0 ${typeBg[item.type] || ''}" style="color:#fff!important">${typeNames[item.type] || ''}</span>`;
+                    container.appendChild(card);
+                });
+            }
+            modal.classList.remove('hidden');
         }
 
         function openEditModal(item, sourceElement = null) {
@@ -2566,6 +2719,7 @@ async function handleLogout(){
                         await loadData();
                         renderCalendar();
                         renderListTab();
+                        renderMyOutings();
                     }
                 )
                 .subscribe();
