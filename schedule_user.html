@@ -189,6 +189,11 @@
             margin-top: 16px;
             margin-bottom: 0;
         }
+
+/* 새 패치노트 알림: 설정 및 패치노트 확인 버튼 우측 상단 */
+.patchnote-unread-dot{position:relative!important;overflow:visible!important;}
+.patchnote-unread-dot::after{content:"";position:absolute;top:-4px;right:-4px;width:9px;height:9px;background:#ef2929;border:2px solid #fff;border-radius:50%;box-sizing:content-box;pointer-events:none;z-index:5;box-shadow:0 0 0 1px rgba(220,38,38,.12);}
+
 </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased relative">
@@ -542,6 +547,56 @@
 
 <script src="patchnotes.js?v=20261025-2"></script>
 <script src="app-install.js?v=20261025-1"></script>
+
+<script>
+/* 공통 패치노트 확인 상태: 실제 patchnotes-data.js 파일 내용 변경을 감지합니다. */
+(function(){
+  const SEEN_KEY='outing2.patchnotes.seen-content-v1';
+  let currentFingerprint=null;
+  const settingsSelector='button[onclick*="openSettingsModal"]';
+  const notesSelector='button[onclick*="openPatchNotesModal"]';
+  const buttons=()=>[...document.querySelectorAll(settingsSelector+','+notesSelector)];
+  function paint(){
+    const unread=!!currentFingerprint && localStorage.getItem(SEEN_KEY)!==currentFingerprint;
+    buttons().forEach(button=>{
+      button.classList.toggle('patchnote-unread-dot',unread);
+      if(button.matches(notesSelector)) button.setAttribute('aria-label',unread?'패치노트 확인 (새로운 내용 있음)':'패치노트 확인');
+    });
+  }
+  // 같은 GitHub Pages 출처에서 파일의 전체 내용을 읽어 변경을 판별합니다.
+  async function refresh(){
+    try{
+      const url=new URL('patchnotes-data.js',location.href);
+      url.searchParams.set('_patchcheck',String(Date.now()));
+      const response=await fetch(url.toString(),{cache:'no-store'});
+      if(!response.ok)return;
+      const text=await response.text();
+      // 32비트 이중 해시: 저장되는 것은 패치노트 본문이 아니라 변경 감지용 지문뿐입니다.
+      let a=2166136261,b=5381;
+      for(let i=0;i<text.length;i++){
+        const code=text.charCodeAt(i);
+        a=Math.imul(a^code,16777619)>>>0;
+        b=(Math.imul(b,33)^code)>>>0;
+      }
+      currentFingerprint=text.length+':'+a.toString(16)+':'+b.toString(16);
+      paint();
+    }catch(e){console.warn('패치노트 변경 확인 실패:',e);}
+  }
+  document.addEventListener('click',e=>{
+    const target=e.target.closest(notesSelector);
+    if(!target || !currentFingerprint)return;
+    // 사용자가 패치노트를 확인하기 위해 연 시점에 읽음 처리
+    localStorage.setItem(SEEN_KEY,currentFingerprint);
+    paint();
+  },true);
+  window.addEventListener('storage',e=>{if(e.key===SEEN_KEY)paint();});
+  window.addEventListener('pageshow',refresh);
+  window.addEventListener('focus',refresh);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh);
+  else refresh();
+})();
+</script>
+
 </body>
 
     

@@ -115,6 +115,11 @@
             margin-top: 16px;
             margin-bottom: 0;
         }
+
+/* 새 패치노트 알림: 설정 및 패치노트 확인 버튼 우측 상단 */
+.patchnote-unread-dot{position:relative!important;overflow:visible!important;}
+.patchnote-unread-dot::after{content:"";position:absolute;top:-4px;right:-4px;width:9px;height:9px;background:#ef2929;border:2px solid #fff;border-radius:50%;box-sizing:content-box;pointer-events:none;z-index:5;box-shadow:0 0 0 1px rgba(220,38,38,.12);}
+
 </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased relative">
@@ -427,6 +432,56 @@
 
 <script src="patchnotes.js?v=20261025-2"></script>
 <script src="app-install.js?v=20261025-1"></script>
+
+<script>
+/* 공통 패치노트 확인 상태: 실제 patchnotes-data.js 파일 내용 변경을 감지합니다. */
+(function(){
+  const SEEN_KEY='outing2.patchnotes.seen-content-v1';
+  let currentFingerprint=null;
+  const settingsSelector='button[onclick*="openSettingsModal"]';
+  const notesSelector='button[onclick*="openPatchNotesModal"]';
+  const buttons=()=>[...document.querySelectorAll(settingsSelector+','+notesSelector)];
+  function paint(){
+    const unread=!!currentFingerprint && localStorage.getItem(SEEN_KEY)!==currentFingerprint;
+    buttons().forEach(button=>{
+      button.classList.toggle('patchnote-unread-dot',unread);
+      if(button.matches(notesSelector)) button.setAttribute('aria-label',unread?'패치노트 확인 (새로운 내용 있음)':'패치노트 확인');
+    });
+  }
+  // 같은 GitHub Pages 출처에서 파일의 전체 내용을 읽어 변경을 판별합니다.
+  async function refresh(){
+    try{
+      const url=new URL('patchnotes-data.js',location.href);
+      url.searchParams.set('_patchcheck',String(Date.now()));
+      const response=await fetch(url.toString(),{cache:'no-store'});
+      if(!response.ok)return;
+      const text=await response.text();
+      // 32비트 이중 해시: 저장되는 것은 패치노트 본문이 아니라 변경 감지용 지문뿐입니다.
+      let a=2166136261,b=5381;
+      for(let i=0;i<text.length;i++){
+        const code=text.charCodeAt(i);
+        a=Math.imul(a^code,16777619)>>>0;
+        b=(Math.imul(b,33)^code)>>>0;
+      }
+      currentFingerprint=text.length+':'+a.toString(16)+':'+b.toString(16);
+      paint();
+    }catch(e){console.warn('패치노트 변경 확인 실패:',e);}
+  }
+  document.addEventListener('click',e=>{
+    const target=e.target.closest(notesSelector);
+    if(!target || !currentFingerprint)return;
+    // 사용자가 패치노트를 확인하기 위해 연 시점에 읽음 처리
+    localStorage.setItem(SEEN_KEY,currentFingerprint);
+    paint();
+  },true);
+  window.addEventListener('storage',e=>{if(e.key===SEEN_KEY)paint();});
+  window.addEventListener('pageshow',refresh);
+  window.addEventListener('focus',refresh);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh);
+  else refresh();
+})();
+</script>
+
 </body>
 
     
@@ -1386,7 +1441,7 @@ function showDateFilterModal(sourceElement = null) {
 
 
 const ADMIN_NOTIFICATION_UI_KEY = 'adminNotificationUiEnabled';
-const ADMIN_VAPID_PUBLIC_KEY = 'BJx5yvicJ2S74u5xdJ-Mb4_vVY7uEDaoJRDuPRskLk1vuZ5Cdetl5Jqtsd4m5jfdf1i8YPq-9vjC8RYpQtZumEo';
+// VAPID 공개키는 config.js의 VAPID_PUBLIC_KEY를 공통으로 사용합니다.
 
 function urlBase64ToUint8Array(base64String){
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -1435,6 +1490,11 @@ function setAdminNotificationSwitchBusy(isBusy){
 }
 
 async function getPushServiceWorkerRegistration(){
+    // file://, sandbox iframe 등 opaque origin에서는 Service Worker를 등록할 수 없습니다.
+    const localDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if(location.origin === 'null' || !(location.protocol === 'https:' || localDev) || !window.isSecureContext){
+        throw new Error('푸시 알림은 GitHub Pages의 HTTPS 주소에서만 설정할 수 있습니다. 앱을 배포한 뒤 https://sejunjoa.github.io/outing2/ 에서 다시 시도하세요.');
+    }
     if(!('serviceWorker' in navigator)){
         throw new Error('이 브라우저는 서비스 워커를 지원하지 않습니다.');
     }
@@ -1565,10 +1625,7 @@ async function enableAdminNotifications(){
         throw new Error('이 브라우저에서는 푸시 알림을 지원하지 않습니다.');
     }
 
-    const vapidPublicKey =
-        (typeof VAPID_PUBLIC_KEY !== 'undefined' && VAPID_PUBLIC_KEY)
-            ? VAPID_PUBLIC_KEY
-            : ADMIN_VAPID_PUBLIC_KEY;
+    const vapidPublicKey = (typeof VAPID_PUBLIC_KEY !== 'undefined') ? VAPID_PUBLIC_KEY : '';
 
     if(!vapidPublicKey){
         throw new Error('알림 설정 정보를 불러오지 못했습니다.');
